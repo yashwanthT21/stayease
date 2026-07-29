@@ -195,6 +195,26 @@ body {
   flex: 0 0 auto;
 }
 
+/* Same fix for the generic CRUD modal (check-in/out, guests, etc.): its <form>
+   wraps header+body+footer, so make it the flex column the scrollable modal
+   expects — body scrolls, footer stays pinned. */
+.se-crud-dialog > form {
+  display: flex;
+  flex-direction: column;
+  max-height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+.se-crud-dialog > form > .modal-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+}
+.se-crud-dialog > form > .modal-header,
+.se-crud-dialog > form > .modal-footer {
+  flex: 0 0 auto;
+}
+
 /* Property listing gallery cards */
 .se-owner-listing {
   border: none;
@@ -252,6 +272,14 @@ body {
   background: transparent;
   border-color: transparent;
   cursor: default;
+}
+/* Read-only calendar (e.g. the guest booking viewer): no hover affordance. */
+.se-cal-cell.se-cal-static {
+  cursor: default;
+}
+.se-cal-cell.se-cal-static:hover {
+  box-shadow: none;
+  transform: none;
 }
 .se-cal-day {
   font-weight: 600;

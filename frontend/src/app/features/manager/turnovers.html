@@ -1,0 +1,210 @@
+<div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-4">
+  <div>
+    <h1 class="h4 mb-0"><i class="bi bi-arrow-repeat text-primary me-2"></i>Turnovers</h1>
+    <p class="text-muted mb-0 small">Assign a housekeeper to clean a property after a guest checks out.</p>
+  </div>
+  @if (canCreate()) {
+    <button class="btn btn-primary btn-sm" (click)="openCreate()" [disabled]="loading() || checkedOutReservations().length === 0">
+      <i class="bi bi-plus-lg me-1"></i>New Turnover
+    </button>
+  }
+</div>
+
+@if (canCreate() && !loading() && checkedOutReservations().length === 0) {
+  <div class="alert alert-info d-flex align-items-center gap-2">
+    <i class="bi bi-info-circle-fill"></i>
+    <span>No checked-out stays yet — a turnover can only be created after a reservation has been checked out.</span>
+  </div>
+}
+
+<div class="card shadow-sm border-0">
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>ID</th>
+          <th>Property</th>
+          <th>Reservation</th>
+          <th>Assigned to</th>
+          <th>Assigned date</th>
+          <th>Start by</th>
+          <th>Complete by</th>
+          <th>Housekeeper status</th>
+          <th>Manager status</th>
+          <th class="text-end">Checklist</th>
+        </tr>
+      </thead>
+      <tbody>
+        @if (loading()) {
+          <tr><td colspan="10" class="text-center text-muted py-4"><div class="spinner-border spinner-border-sm text-primary me-2"></div>Loading…</td></tr>
+        } @else if (turnovers().length === 0) {
+          <tr><td colspan="10" class="text-center text-muted py-5"><i class="bi bi-arrow-repeat fs-3 d-block mb-2"></i>No turnovers yet.</td></tr>
+        } @else {
+          @for (t of turnovers(); track t.id) {
+            <tr>
+              <td class="text-muted">#{{ t.id }}</td>
+              <td class="fw-semibold">{{ propertyTitle(t.propertyId) }}</td>
+              <td>{{ t.checkOutReservationId ? '#' + t.checkOutReservationId : '—' }}</td>
+              <td>{{ housekeeperName(t.assignedToId) }}</td>
+              <td>{{ t.assignedDate || '—' }}</td>
+              <td>{{ fmtDateTime(t.startByTime) }}</td>
+              <td>{{ fmtDateTime(t.completeByTime) }}</td>
+
+              <!-- Housekeeper status: editable by the housekeeper, read-only for the manager -->
+              <td>
+                @if (canCreate()) {
+                  <span class="badge {{ hkBadge(t.housekeeperStatus) }}">{{ t.housekeeperStatus | labelize }}</span>
+                } @else {
+                  <select class="form-select form-select-sm" style="min-width: 130px" (change)="onHousekeeperStatus(t, $event)">
+                    @for (s of housekeeperStatuses; track s) {
+                      <option [value]="s" [selected]="t.housekeeperStatus === s">{{ s | labelize }}</option>
+                    }
+                  </select>
+                }
+              </td>
+
+              <!-- Manager status: editable by the manager (only after housekeeper is Completed), read-only for the housekeeper -->
+              <td>
+                @if (canCreate()) {
+                  <select class="form-select form-select-sm" style="min-width: 150px"
+                          (change)="onManagerStatus(t, $event)"
+                          [disabled]="t.housekeeperStatus !== 'COMPLETED'"
+                          [title]="t.housekeeperStatus !== 'COMPLETED' ? 'Available once the housekeeper marks their work Completed' : ''">
+                    @for (s of managerStatuses; track s) {
+                      <option [value]="s" [selected]="t.status === s">{{ s | labelize }}</option>
+                    }
+                  </select>
+                  @if (t.housekeeperStatus !== 'COMPLETED') {
+                    <div class="form-text small">Awaiting housekeeper</div>
+                  }
+                } @else {
+                  <span class="badge {{ badge(t.status) }}">{{ t.status | labelize }}</span>
+                }
+              </td>
+
+              <td class="text-end">
+                <button class="btn btn-sm btn-outline-secondary" (click)="viewChecklist(t)" title="View this turnover's checklist">
+                  <i class="bi bi-check2-square me-1"></i>View checklist
+                </button>
+              </td>
+            </tr>
+          }
+        }
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- New Turnover modal -->
+@if (modalOpen()) {
+  <app-owner-dialog title="New Turnover" icon="bi-arrow-repeat" size="md" (dismiss)="closeModal()">
+    <div class="modal-body">
+      <!-- Reservation (checked-out only) -->
+      <div class="mb-3">
+        <label class="form-label">Reservation (checked-out) <span class="text-danger">*</span></label>
+        <select class="form-select" (change)="onReservation($event)" [class.is-invalid]="triedSubmit() && !reservationId()">
+          <option value="" disabled [selected]="reservationId() === null">Choose a checked-out reservation…</option>
+          @for (r of checkedOutReservations(); track r.id) {
+            <option [value]="r.id" [selected]="reservationId() === r.id">#{{ r.id }} · {{ propertyTitle(r.propertyId) }} · out {{ r.checkOutDate }}</option>
+          }
+        </select>
+        <div class="invalid-feedback">Pick the checked-out reservation to clean up after.</div>
+      </div>
+
+      <!-- Property (auto-filled, read-only) -->
+      <div class="mb-3">
+        <label class="form-label">Property to clean</label>
+        <input type="text" class="form-control" [value]="selectedPropertyTitle()" placeholder="— auto-filled from the reservation —" readonly disabled />
+      </div>
+
+      <!-- Assign to housekeeper -->
+      <div class="mb-3">
+        <label class="form-label">Assign to (housekeeper) <span class="text-danger">*</span></label>
+        <select class="form-select" (change)="onHousekeeper($event)" [class.is-invalid]="triedSubmit() && !housekeeperId()">
+          <option value="" disabled [selected]="housekeeperId() === null">Choose a housekeeper…</option>
+          @for (h of housekeepers(); track h.id) {
+            <option [value]="h.id" [selected]="housekeeperId() === h.id">{{ h.name }} (#{{ h.id }})</option>
+          }
+        </select>
+        @if (housekeepers().length === 0) {
+          <div class="form-text text-danger">No housekeepers are registered yet.</div>
+        }
+        <div class="invalid-feedback">Assign a housekeeper.</div>
+      </div>
+
+      <div class="row g-3">
+        <div class="col-md-4">
+          <label class="form-label">Assigned date</label>
+          <input type="date" class="form-control" [value]="assignedDate()" (input)="onAssignedDate($event)" />
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Start by</label>
+          <input type="datetime-local" class="form-control" [value]="startByTime()" (input)="onStartBy($event)" />
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Complete by</label>
+          <input type="datetime-local" class="form-control" [value]="completeByTime()" (input)="onCompleteBy($event)" />
+        </div>
+      </div>
+
+      <div class="mt-3">
+        <label class="form-label">Status</label>
+        <select class="form-select" (change)="onStatus($event)">
+          @for (s of statuses; track s) {
+            <option [value]="s" [selected]="status() === s">{{ s | labelize }}</option>
+          }
+        </select>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button type="button" class="btn btn-outline-secondary" (click)="closeModal()">Cancel</button>
+      <button type="button" class="btn btn-primary" [disabled]="saving()" (click)="submit()">
+        @if (saving()) { <span class="spinner-border spinner-border-sm me-1"></span> }
+        Create turnover
+      </button>
+    </div>
+  </app-owner-dialog>
+}
+
+<!-- View checklist modal -->
+@if (checklistFor(); as t) {
+  <app-owner-dialog [title]="'Checklist · ' + propertyTitle(t.propertyId)" icon="bi-check2-square" size="lg" (dismiss)="closeChecklist()">
+    <div class="modal-body">
+      <p class="text-muted small mb-3">
+        Turnover #{{ t.id }} · reservation {{ t.checkOutReservationId ? '#' + t.checkOutReservationId : '—' }} ·
+        housekeeper status <span class="badge {{ hkBadge(t.housekeeperStatus) }}">{{ t.housekeeperStatus | labelize }}</span>
+      </p>
+
+      @if (checklistLoading()) {
+        <div class="text-center text-muted py-4"><div class="spinner-border spinner-border-sm text-primary me-2"></div>Loading…</div>
+      } @else if (checklistItems().length === 0) {
+        <div class="text-center text-muted py-4"><i class="bi bi-inbox fs-3 d-block mb-2"></i>No checklist items for this turnover.</div>
+      } @else {
+        <div class="table-responsive">
+          <table class="table table-sm align-middle mb-0">
+            <thead class="table-light">
+              <tr><th>Task</th><th>Category</th><th class="text-center">Completed</th><th>Status</th><th>Notes</th></tr>
+            </thead>
+            <tbody>
+              @for (c of checklistItems(); track c.id) {
+                <tr>
+                  <td class="fw-semibold">{{ c.taskName }}</td>
+                  <td>{{ c.category | labelize }}</td>
+                  <td class="text-center">
+                    @if (c.completed) { <i class="bi bi-check-circle-fill text-success"></i> } @else { <i class="bi bi-dash-circle text-muted"></i> }
+                  </td>
+                  <td><span class="badge {{ c.status === 'DONE' ? 'text-bg-success' : 'text-bg-secondary' }}">{{ c.status | labelize }}</span></td>
+                  <td class="text-muted small">{{ c.notes || '—' }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-outline-secondary" (click)="closeChecklist()">Close</button>
+    </div>
+  </app-owner-dialog>
+}

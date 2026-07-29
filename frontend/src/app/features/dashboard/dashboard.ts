@@ -32,10 +32,13 @@ export class DashboardComponent implements OnInit {
   private router = inject(Router);
 
   ngOnInit(): void {
-    // Owners have a bespoke workspace — send them there instead of the
+    // Owners and guests have bespoke dashboards — send them there instead of the
     // generic module grid. Other roles stay on this dashboard as before.
-    if (this.auth.role() === 'OWNER') {
+    const role = this.auth.role();
+    if (role === 'OWNER') {
       void this.router.navigateByUrl('/owner');
+    } else if (role === 'GUEST') {
+      void this.router.navigateByUrl('/guest/browse');
     }
   }
 

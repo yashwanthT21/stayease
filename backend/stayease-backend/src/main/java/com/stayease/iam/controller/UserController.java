@@ -60,6 +60,15 @@ public class UserController {
         return ResponseEntity.ok(userService.getManagers());
     }
 
+    /**
+     * GET /api/users/housekeepers — the list of HOUSEKEEPING users, used by a
+     * property manager to assign a turnover. Declared before /{id}.
+     */
+    @GetMapping("/housekeepers")
+    public ResponseEntity<List<UserResponse>> getHousekeepers() {
+        return ResponseEntity.ok(userService.getHousekeepers());
+    }
+
     /** GET /api/users/{id} — fetch one user. 200 OK, or 404 if not found. */
     @GetMapping("/{id}")
     public ResponseEntity<UserResponse> getById(@PathVariable Long id) {

@@ -2,6 +2,8 @@ package com.stayease.housekeeping.service;
 
 import com.stayease.housekeeping.dto.TurnoverAssignmentRequest;
 import com.stayease.housekeeping.dto.TurnoverAssignmentResponse;
+import com.stayease.housekeeping.enums.HousekeeperStatus;
+import com.stayease.housekeeping.enums.TurnoverStatus;
 
 import java.util.List;
 
@@ -14,6 +16,12 @@ public interface TurnoverAssignmentService {
     TurnoverAssignmentResponse getById(Long id);
 
     TurnoverAssignmentResponse update(Long id, TurnoverAssignmentRequest request);
+
+    /** Housekeeper sets their own completion state (PENDING/COMPLETED). */
+    TurnoverAssignmentResponse setHousekeeperStatus(Long id, HousekeeperStatus status);
+
+    /** Manager sets the overall status — only allowed once the housekeeper is COMPLETED. */
+    TurnoverAssignmentResponse setManagerStatus(Long id, TurnoverStatus status);
 
     void delete(Long id);
 

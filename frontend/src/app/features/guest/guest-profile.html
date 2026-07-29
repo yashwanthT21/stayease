@@ -1,0 +1,77 @@
+<div class="mb-4">
+  <h1 class="h4 mb-0"><i class="bi bi-person-circle text-primary me-2"></i>My Profile</h1>
+  <p class="text-muted mb-0 small">Keep your guest details up to date — they're used on your bookings.</p>
+</div>
+
+@if (loading()) {
+  <div class="text-center text-muted py-5"><div class="spinner-border text-primary"></div></div>
+} @else {
+  <div class="row g-3">
+    <div class="col-lg-7">
+      <div class="card shadow-sm border-0">
+        <div class="card-header bg-white fw-semibold">Details</div>
+        <div class="card-body">
+          @if (!profile()) {
+            <div class="alert alert-info py-2 small"><i class="bi bi-info-circle me-1"></i>You don't have a profile yet — fill this in to create one.</div>
+          }
+          <form [formGroup]="form" (ngSubmit)="save()">
+            <div class="mb-3">
+              <label class="form-label">Full name <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" formControlName="name" [class.is-invalid]="invalid('name')" maxlength="150" />
+              <div class="invalid-feedback">A name is required.</div>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Email <span class="text-danger">*</span></label>
+              <input type="email" class="form-control" formControlName="email" [class.is-invalid]="invalid('email')" maxlength="180" />
+              <div class="invalid-feedback">Enter a valid email.</div>
+            </div>
+            <div class="row g-3">
+              <div class="col-sm-6">
+                <label class="form-label">Phone</label>
+                <input type="text" class="form-control" formControlName="phone" maxlength="20" placeholder="optional" />
+              </div>
+              <div class="col-sm-6">
+                <label class="form-label">Nationality</label>
+                <input type="text" class="form-control" formControlName="nationality" maxlength="80" placeholder="optional" />
+              </div>
+            </div>
+            <div class="mt-4">
+              <button type="submit" class="btn btn-primary" [disabled]="saving()">
+                @if (saving()) { <span class="spinner-border spinner-border-sm me-1"></span> }
+                {{ profile() ? 'Save changes' : 'Create profile' }}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Server-managed info -->
+    @if (profile(); as p) {
+      <div class="col-lg-5">
+        <div class="card shadow-sm border-0 h-100">
+          <div class="card-header bg-white fw-semibold">Account standing</div>
+          <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+              <span class="text-muted">Verification</span>
+              <span class="badge {{ verificationBadge(p.verificationStatus) }}">{{ p.verificationStatus | labelize }}</span>
+            </div>
+            <div class="d-flex justify-content-between align-items-center mb-3">
+              <span class="text-muted">Status</span>
+              <span class="badge text-bg-light border">{{ p.status | labelize }}</span>
+            </div>
+            <div class="d-flex justify-content-between align-items-center mb-3">
+              <span class="text-muted">Review score</span>
+              <span class="fw-semibold">{{ p.reviewScore != null ? p.reviewScore : '—' }}</span>
+            </div>
+            <div class="d-flex justify-content-between align-items-center">
+              <span class="text-muted">Bookings</span>
+              <span class="fw-semibold">{{ p.bookingCount }}</span>
+            </div>
+            <div class="form-text mt-3"><i class="bi bi-shield-lock me-1"></i>These are managed by StayEase and can't be edited here.</div>
+          </div>
+        </div>
+      </div>
+    }
+  </div>
+}

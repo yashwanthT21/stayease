@@ -57,6 +57,8 @@ export interface PatchAction {
   suffix: string;
   /** Only show the button when this predicate holds for the row. */
   showWhen?: (row: Record<string, unknown>) => boolean;
+  /** Bootstrap outline colour suffix for the button (default 'success'). */
+  variant?: 'success' | 'danger' | 'primary' | 'secondary' | 'warning';
 }
 
 /**
@@ -79,6 +81,8 @@ export interface ResourceConfig {
   listColumns: string[];
   filters?: FilterConfig[];
   readOnly?: boolean; // no create/edit/delete (audit logs)
+  /** Roles for which this resource is view-only (create/edit/delete hidden). */
+  readOnlyRoles?: readonly UserRole[];
   patchActions?: PatchAction[];
   hideInNav?: boolean;
   /** Optional per-role list scoping (e.g. managers see only their properties). */

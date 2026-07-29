@@ -7,6 +7,7 @@ import lombok.NoArgsConstructor;
 import java.time.LocalDateTime;
 import java.time.LocalDate;
 import com.stayease.housekeeping.enums.TurnoverStatus;
+import com.stayease.housekeeping.enums.HousekeeperStatus;
 
 @Entity
 @Table(name = "turnover_assignments")
@@ -37,5 +38,10 @@ public class TurnoverAssignment {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private TurnoverStatus status;
+
+    /** Set by the assigned housekeeper (their own completion state). */
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private HousekeeperStatus housekeeperStatus;
 
 }

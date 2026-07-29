@@ -5,6 +5,7 @@ import { NAV_GROUP_ORDER, RESOURCES } from '../core/registry';
 import { ResourceConfig } from '../shared/crud/resource-config';
 import { LabelizePipe } from '../shared/pipes/labelize.pipe';
 import { OWNER_NAV } from '../features/owner/owner-nav';
+import { GUEST_NAV } from '../features/guest/guest-nav';
 
 interface NavGroup {
   group: string;
@@ -25,7 +26,9 @@ export class ShellComponent {
 
   /** Owners get a bespoke sidebar; every other role keeps the registry nav. */
   protected readonly isOwner = computed(() => this.auth.role() === 'OWNER');
+  protected readonly isGuest = computed(() => this.auth.role() === 'GUEST');
   protected readonly ownerNav = OWNER_NAV;
+  protected readonly guestNav = GUEST_NAV;
 
   /** Nav items the current role is allowed to see, grouped and ordered. */
   protected readonly navGroups = computed<NavGroup[]>(() => {

@@ -6,6 +6,8 @@ import com.stayease.common.exception.ResourceNotFoundException;
 import com.stayease.housekeeping.dto.TurnoverAssignmentRequest;
 import com.stayease.housekeeping.dto.TurnoverAssignmentResponse;
 import com.stayease.housekeeping.entity.TurnoverAssignment;
+import com.stayease.housekeeping.enums.HousekeeperStatus;
+import com.stayease.housekeeping.enums.TurnoverStatus;
 import com.stayease.housekeeping.mapper.TurnoverAssignmentMapper;
 import com.stayease.housekeeping.repository.TurnoverAssignmentRepository;
 import com.stayease.iam.service.UserService;
@@ -70,6 +72,26 @@ public class TurnoverAssignmentServiceImpl implements TurnoverAssignmentService 
         TurnoverAssignment entity = findOrThrow(id);
         validateReferences(request);
         TurnoverAssignmentMapper.updateEntity(entity, request);
+        return TurnoverAssignmentMapper.toResponse(repository.save(entity));
+    }
+
+    @Override
+    public TurnoverAssignmentResponse setHousekeeperStatus(Long id, HousekeeperStatus status) {
+        TurnoverAssignment entity = findOrThrow(id);
+        entity.setHousekeeperStatus(status);
+        return TurnoverAssignmentMapper.toResponse(repository.save(entity));
+    }
+
+    @Override
+    public TurnoverAssignmentResponse setManagerStatus(Long id, TurnoverStatus status) {
+        TurnoverAssignment entity = findOrThrow(id);
+        // The manager may only set the overall status after the housekeeper has
+        // finished (verify-after-work-done rule).
+        if (entity.getHousekeeperStatus() != HousekeeperStatus.COMPLETED) {
+            throw new IllegalArgumentException(
+                    "The housekeeper must mark their work Completed before the manager status can be set");
+        }
+        entity.setStatus(status);
         return TurnoverAssignmentMapper.toResponse(repository.save(entity));
     }
 

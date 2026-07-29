@@ -53,6 +53,23 @@ export class OwnerDataService {
     return this.crud.list<UserResponse>('/api/users/managers');
   }
 
+  /**
+   * Properties the current user is responsible for — used by the shared
+   * availability calendar. An owner sees the ones they own; a property manager
+   * sees the ones assigned to them (the backend scopes managers by identity, so
+   * no param is needed for them).
+   */
+  manageableProperties(): Observable<PropertyResponse[]> {
+    if (this.auth.role() === 'PROPERTY_MANAGER') {
+      return this.crud.list<PropertyResponse>('/api/properties');
+    }
+    const ownerId = this.ownerId();
+    if (!ownerId) {
+      return of([]);
+    }
+    return this.crud.list<PropertyResponse>('/api/properties', { ownerId });
+  }
+
   availability(propertyId: number): Observable<AvailabilityCalendarResponse[]> {
     return this.crud.list<AvailabilityCalendarResponse>('/api/availability', { propertyId });
   }

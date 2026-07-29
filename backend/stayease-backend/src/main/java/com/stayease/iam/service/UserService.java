@@ -18,6 +18,9 @@ public interface UserService {
     /** Users with the PROPERTY_MANAGER role, for the owner's assignment picker. */
     List<UserResponse> getManagers();
 
+    /** Users with the HOUSEKEEPING role, for the manager's turnover assignment picker. */
+    List<UserResponse> getHousekeepers();
+
     UserResponse getById(Long id);
 
     UserResponse update(Long id, UserRequest request);

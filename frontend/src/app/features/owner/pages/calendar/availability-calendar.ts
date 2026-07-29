@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, computed, inject, input, signal } from '@angular/core';
 import { CurrencyPipe } from '@angular/common';
 import { ActivatedRoute } from '@angular/router';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -30,12 +30,19 @@ const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 
   imports: [ReactiveFormsModule, LabelizePipe, CurrencyPipe, OwnerPageHeaderComponent, OwnerDialogComponent],
   templateUrl: './availability-calendar.html',
 })
-export class AvailabilityCalendarComponent {
+export class AvailabilityCalendarComponent implements OnInit {
   private route = inject(ActivatedRoute);
   private fb = inject(FormBuilder);
   private crud = inject(CrudService);
   private toast = inject(ToastService);
   private data = inject(OwnerDataService);
+
+  /** When true, the calendar is a pure viewer — days can't be edited. */
+  readonly readOnly = input(false);
+  /** When set, show only this one property (no picker) — used embedded, e.g. on the guest booking screen. */
+  readonly fixedPropertyId = input<number | null>(null);
+  /** Embedded = driven by a fixed property (hides the page header + picker). */
+  protected readonly embedded = computed(() => this.fixedPropertyId() != null);
 
   protected readonly weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
   protected readonly statuses = AVAILABILITY_STATUSES;
@@ -101,9 +108,16 @@ export class AvailabilityCalendarComponent {
     return counts;
   });
 
-  constructor() {
+  ngOnInit(): void {
+    const fixed = this.fixedPropertyId();
+    if (fixed) {
+      // Embedded single-property viewer (e.g. guest booking screen).
+      this.selectedId.set(fixed);
+      this.loadEntries(fixed);
+      return;
+    }
     const preselect = Number(this.route.snapshot.queryParamMap.get('propertyId')) || null;
-    this.data.myProperties().subscribe({
+    this.data.manageableProperties().subscribe({
       next: (props) => {
         this.properties.set(props);
         const initial = preselect && props.some((p) => p.id === preselect) ? preselect : props[0]?.id ?? null;
@@ -163,7 +177,7 @@ export class AvailabilityCalendarComponent {
 
   // ---- day editor ----
   protected openDay(cell: DayCell): void {
-    if (!this.selectedId()) {
+    if (this.readOnly() || !this.selectedId()) {
       return;
     }
     this.editingDate.set(cell.date);
@@ -180,7 +194,6 @@ export class AvailabilityCalendarComponent {
     return this.fb.group({
       availabilityStatus: [entry?.availabilityStatus ?? 'AVAILABLE', [Validators.required]],
       basePrice: [entry?.basePrice ?? '', [Validators.required, Validators.min(0.01)]],
-      minimumNights: [entry?.minimumNights ?? 1, [Validators.required, Validators.min(1)]],
     });
   }
 
@@ -190,13 +203,15 @@ export class AvailabilityCalendarComponent {
       this.form.markAllAsTouched();
       return;
     }
-    const raw = this.form.getRawValue() as { availabilityStatus: AvailabilityStatus; basePrice: number; minimumNights: number };
+    const raw = this.form.getRawValue() as { availabilityStatus: AvailabilityStatus; basePrice: number };
     const payload = {
       propertyId,
       calendarDate: this.editingDate(),
       availabilityStatus: raw.availabilityStatus,
       basePrice: Number(raw.basePrice),
-      minimumNights: Number(raw.minimumNights),
+      // Minimum-nights was removed with the pricing engine; the backend still
+      // requires the field, so we always send 1 (no minimum).
+      minimumNights: 1,
     };
 
     this.saving.set(true);

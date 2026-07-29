@@ -1,20 +1,26 @@
-<app-owner-page-header icon="bi-calendar3" title="Availability Calendar" subtitle="See and manage nightly availability and pricing."></app-owner-page-header>
+@if (!embedded()) {
+  <app-owner-page-header icon="bi-calendar3" title="Availability Calendar" subtitle="See and manage nightly availability and pricing."></app-owner-page-header>
+}
 
-@if (properties().length === 0) {
+@if (!embedded() && properties().length === 0) {
   <div class="card shadow-sm border-0"><div class="card-body text-center text-muted py-5">
     <i class="bi bi-calendar3 fs-1 d-block mb-2"></i>Add a property first to manage its availability.
   </div></div>
 } @else {
   <div class="card shadow-sm border-0">
     <div class="card-header bg-white d-flex align-items-center justify-content-between flex-wrap gap-2">
-      <div class="d-flex align-items-center gap-2">
-        <label class="text-muted small mb-0">Property</label>
-        <select class="form-select form-select-sm" style="min-width: 240px" (change)="onSelectProperty($event)">
-          @for (p of properties(); track p.id) {
-            <option [value]="p.id" [selected]="p.id === selectedId()">{{ p.title }} · {{ p.city }}</option>
-          }
-        </select>
-      </div>
+      @if (!embedded()) {
+        <div class="d-flex align-items-center gap-2">
+          <label class="text-muted small mb-0">Property</label>
+          <select class="form-select form-select-sm" style="min-width: 240px" (change)="onSelectProperty($event)">
+            @for (p of properties(); track p.id) {
+              <option [value]="p.id" [selected]="p.id === selectedId()">{{ p.title }} · {{ p.city }}</option>
+            }
+          </select>
+        </div>
+      } @else {
+        <span class="fw-semibold"><i class="bi bi-calendar3 me-1 text-primary"></i>Availability</span>
+      }
 
       <div class="d-flex align-items-center gap-2">
         <button class="btn btn-sm btn-outline-secondary" (click)="prevMonth()" title="Previous month"><i class="bi bi-chevron-left"></i></button>
@@ -31,7 +37,11 @@
         <span><span class="se-cal-dot se-cal-booked"></span> Booked <span class="text-muted">({{ summary()['BOOKED'] }})</span></span>
         <span><span class="se-cal-dot se-cal-blocked"></span> Blocked <span class="text-muted">({{ summary()['BLOCKED'] }})</span></span>
         <span><span class="se-cal-dot se-cal-owner_use"></span> Owner use <span class="text-muted">({{ summary()['OWNER_USE'] }})</span></span>
-        <span class="text-muted ms-auto">Click a day to set price &amp; status.</span>
+        @if (!readOnly()) {
+          <span class="text-muted ms-auto">Click a day to set price &amp; status.</span>
+        } @else {
+          <span class="text-muted ms-auto">Green days are available to book.</span>
+        }
       </div>
 
       @if (loading()) {
@@ -44,7 +54,7 @@
           <div class="se-cal-grid">
             @for (cell of week; track $index) {
               @if (cell) {
-                <button type="button" class="se-cal-cell {{ cellClass(cell) }}" (click)="openDay(cell)">
+                <button type="button" class="se-cal-cell {{ cellClass(cell) }}" [class.se-cal-static]="readOnly()" (click)="openDay(cell)">
                   <span class="se-cal-day">{{ cell.day }}</span>
                   @if (cell.entry) {
                     <span class="se-cal-price">{{ cell.entry.basePrice | currency }}</span>
@@ -64,8 +74,8 @@
   </div>
 }
 
-<!-- Day editor -->
-@if (editorOpen()) {
+<!-- Day editor (only in editable mode) -->
+@if (editorOpen() && !readOnly()) {
   <app-owner-dialog [title]="'Availability · ' + editingDate()" icon="bi-calendar-event" size="md" (dismiss)="closeEditor()">
     <form [formGroup]="form" (ngSubmit)="saveDay()">
       <div class="modal-body">
@@ -75,15 +85,10 @@
             @for (s of statuses; track s) { <option [value]="s">{{ s | labelize }}</option> }
           </select>
         </div>
-        <div class="mb-3">
-          <label class="form-label">Base price / night <span class="text-danger">*</span></label>
+        <div class="mb-1">
+          <label class="form-label">Price <span class="text-danger">*</span></label>
           <input type="number" step="0.01" min="0.01" class="form-control" formControlName="basePrice" [class.is-invalid]="invalid('basePrice')" />
           <div class="invalid-feedback">Enter a price greater than 0.</div>
-        </div>
-        <div class="mb-1">
-          <label class="form-label">Minimum nights <span class="text-danger">*</span></label>
-          <input type="number" min="1" class="form-control" formControlName="minimumNights" [class.is-invalid]="invalid('minimumNights')" />
-          <div class="invalid-feedback">At least 1 night.</div>
         </div>
       </div>
       <div class="modal-footer">

@@ -47,6 +47,10 @@ export type ChecklistStatus = (typeof CHECKLIST_STATUSES)[number];
 export const TURNOVER_STATUSES = ['PENDING', 'IN_PROGRESS', 'COMPLETED', 'ISSUE_REPORTED'] as const;
 export type TurnoverStatus = (typeof TURNOVER_STATUSES)[number];
 
+// Housekeeper's own completion state on a turnover (separate from the manager status).
+export const HOUSEKEEPER_STATUSES = ['PENDING', 'COMPLETED'] as const;
+export type HousekeeperStatus = (typeof HOUSEKEEPER_STATUSES)[number];
+
 // ---- Maintenance ----
 export const MAINTENANCE_CATEGORIES = ['PLUMBING', 'ELECTRICAL', 'APPLIANCE', 'STRUCTURAL', 'PEST', 'OTHER'] as const;
 export type MaintenanceCategory = (typeof MAINTENANCE_CATEGORIES)[number];

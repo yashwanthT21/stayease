@@ -1,0 +1,99 @@
+@if (!selected()) {
+  <!-- Gallery of bookable properties -->
+  <div class="mb-4">
+    <h1 class="h4 mb-0"><i class="bi bi-houses text-primary me-2"></i>Properties</h1>
+    <p class="text-muted mb-0 small">Browse available properties and request a booking.</p>
+  </div>
+
+  @if (loading()) {
+    <div class="text-center text-muted py-5"><div class="spinner-border text-primary"></div><div class="mt-2">Loading properties…</div></div>
+  } @else if (properties().length === 0) {
+    <div class="card shadow-sm border-0"><div class="card-body text-center text-muted py-5">
+      <i class="bi bi-houses fs-1 d-block mb-2"></i>No properties are available for booking right now.
+    </div></div>
+  } @else {
+    <div class="row g-3">
+      @for (p of properties(); track p.id) {
+        <div class="col-sm-6 col-xl-4">
+          <div class="card se-owner-listing shadow-sm h-100 se-owner-tile cursor-pointer" (click)="pick(p)">
+            <div class="se-owner-listing-cover d-flex align-items-center justify-content-center">
+              <i class="bi {{ typeIcon(p.type) }}"></i>
+            </div>
+            <div class="card-body">
+              <div class="d-flex justify-content-between align-items-start">
+                <h2 class="h6 mb-1 text-truncate" [title]="p.title">{{ p.title }}</h2>
+                <span class="badge text-bg-light border ms-2 flex-shrink-0">{{ p.type | labelize }}</span>
+              </div>
+              <div class="text-muted small mb-2"><i class="bi bi-geo-alt me-1"></i>{{ p.city }}</div>
+              <div class="d-flex gap-3 text-muted small">
+                <span><i class="bi bi-people me-1"></i>{{ p.maxGuests }}</span>
+                <span><i class="bi bi-door-open me-1"></i>{{ p.bedrooms }}</span>
+                <span><i class="bi bi-droplet me-1"></i>{{ p.bathrooms }}</span>
+              </div>
+            </div>
+            <div class="card-footer bg-white border-top-0">
+              <span class="btn btn-sm btn-primary w-100"><i class="bi bi-calendar-check me-1"></i>View & book</span>
+            </div>
+          </div>
+        </div>
+      }
+    </div>
+  }
+} @else {
+  <!-- Detail + booking -->
+  <button class="btn btn-sm btn-outline-secondary mb-3" (click)="backToList()"><i class="bi bi-arrow-left me-1"></i>All properties</button>
+
+  <div class="row g-3">
+    <div class="col-lg-4">
+      <div class="card shadow-sm border-0 mb-3">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-start">
+            <h1 class="h5 mb-1">{{ selected()!.title }}</h1>
+            <span class="badge text-bg-light border">{{ selected()!.type | labelize }}</span>
+          </div>
+          <div class="text-muted mb-3"><i class="bi bi-geo-alt me-1"></i>{{ selected()!.city }}</div>
+          <div class="d-flex gap-4 text-muted mb-3">
+            <span><i class="bi bi-people me-1"></i>{{ selected()!.maxGuests }} guests</span>
+            <span><i class="bi bi-door-open me-1"></i>{{ selected()!.bedrooms }} bed</span>
+            <span><i class="bi bi-droplet me-1"></i>{{ selected()!.bathrooms }} bath</span>
+          </div>
+          @if (selected()!.amenitiesList) {
+            <div class="small text-muted"><span class="fw-semibold">Amenities:</span> {{ selected()!.amenitiesList }}</div>
+          }
+        </div>
+      </div>
+
+      <div class="card shadow-sm border-0">
+        <div class="card-header bg-white fw-semibold">Request a booking</div>
+        <div class="card-body">
+          <form [formGroup]="form" (ngSubmit)="requestBooking()">
+            <div class="row g-2 mb-3">
+              <div class="col-6">
+                <label class="form-label">Check-in</label>
+                <input type="date" class="form-control" formControlName="checkInDate" [class.is-invalid]="triedSubmit() && form.get('checkInDate')?.invalid" />
+              </div>
+              <div class="col-6">
+                <label class="form-label">Check-out</label>
+                <input type="date" class="form-control" formControlName="checkOutDate" [class.is-invalid]="triedSubmit() && form.get('checkOutDate')?.invalid" />
+              </div>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Guests</label>
+              <input type="number" min="1" class="form-control" formControlName="guestCount" />
+            </div>
+            <button type="submit" class="btn btn-primary w-100" [disabled]="submitting()">
+              @if (submitting()) { <span class="spinner-border spinner-border-sm me-1"></span> }
+              Request booking
+            </button>
+            <div class="form-text mt-2"><i class="bi bi-info-circle me-1"></i>Your request stays pending until a manager approves it.</div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Read-only availability calendar for the picked property -->
+    <div class="col-lg-8">
+      <app-owner-availability-calendar [readOnly]="true" [fixedPropertyId]="selected()!.id" />
+    </div>
+  </div>
+}

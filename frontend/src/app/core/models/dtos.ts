@@ -6,7 +6,7 @@
  */
 import {
   AccessMethod, AdjustmentType, AvailabilityStatus, BookingSource, CheckInStatus, CheckOutStatus,
-  ChecklistCategory, ChecklistStatus, GuestStatus, MaintenanceCategory, MaintenancePriority,
+  ChecklistCategory, ChecklistStatus, GuestStatus, HousekeeperStatus, MaintenanceCategory, MaintenancePriority,
   MaintenanceStatus, NotificationCategory, NotificationStatus, PayoutStatus, PreventiveFrequency,
   PreventiveStatus, PricingRuleStatus, PricingRuleType, PropertyStatus, PropertyType, ReportedByType,
   ReservationStatus, ReviewStatus, StatementStatus, TurnoverStatus, UserRole, UserStatus, VerificationStatus,
@@ -103,6 +103,7 @@ export interface TurnoverAssignmentResponse extends HasId {
   startByTime?: string;
   completeByTime?: string;
   status: TurnoverStatus;
+  housekeeperStatus: HousekeeperStatus;
 }
 
 export interface TurnoverChecklistResponse extends HasId {

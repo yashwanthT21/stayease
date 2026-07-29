@@ -1,9 +1,9 @@
 import { ResourceConfig } from '../shared/crud/resource-config';
 import {
-  ACCESS_METHODS, ADJUSTMENT_TYPES, AVAILABILITY_STATUSES, BOOKING_SOURCES, CHECK_IN_STATUSES,
+  ACCESS_METHODS, AVAILABILITY_STATUSES, BOOKING_SOURCES, CHECK_IN_STATUSES,
   CHECK_OUT_STATUSES, CHECKLIST_CATEGORIES, CHECKLIST_STATUSES, GUEST_STATUSES, MAINTENANCE_CATEGORIES,
   MAINTENANCE_PRIORITIES, MAINTENANCE_STATUSES, NOTIFICATION_CATEGORIES, NOTIFICATION_STATUSES,
-  PAYOUT_STATUSES, PREVENTIVE_FREQUENCIES, PREVENTIVE_STATUSES, PRICING_RULE_STATUSES, PRICING_RULE_TYPES,
+  PAYOUT_STATUSES, PREVENTIVE_FREQUENCIES, PREVENTIVE_STATUSES,
   PROPERTY_STATUSES, PROPERTY_TYPES, REPORTED_BY_TYPES, RESERVATION_STATUSES, REVIEW_STATUSES,
   STATEMENT_STATUSES, TURNOVER_STATUSES, USER_ROLES, USER_STATUSES, VERIFICATION_STATUSES,
 } from './models/enums';
@@ -28,8 +28,10 @@ export const RESOURCES: ResourceConfig[] = [
     singular: 'Property',
     icon: 'bi-houses',
     group: 'Property',
-    // A property manager sees only the properties an owner assigned to them.
+    // A property manager sees only the properties an owner assigned to them,
+    // and cannot create/edit/delete listings — that's the owner's job.
     roleScope: { PROPERTY_MANAGER: { param: 'managerId', value: 'userId' } },
+    readOnlyRoles: ['PROPERTY_MANAGER'],
     listColumns: ['id', 'title', 'type', 'city', 'maxGuests', 'bedrooms', 'bathrooms', 'status'],
     filters: [{ key: 'ownerId', label: 'Owner ID', type: 'number' }],
     fields: [
@@ -49,40 +51,22 @@ export const RESOURCES: ResourceConfig[] = [
     ],
   },
   {
+    // Route is special-cased to the shared AvailabilityCalendarComponent (see
+    // app.routes.ts); this entry drives the property manager's sidebar item.
+    // Owners reach the same component via their own nav (/owner/calendar).
     key: 'availability',
     apiBase: '/api/availability',
-    title: 'Availability',
+    title: 'Availability Calendar',
     singular: 'Availability entry',
     icon: 'bi-calendar3',
     group: 'Property',
-    listColumns: ['id', 'propertyId', 'calendarDate', 'availabilityStatus', 'basePrice', 'minimumNights', 'lastUpdated'],
-    filters: [{ key: 'propertyId', label: 'Property', type: 'reference', ref: propertyRef, required: true }],
+    roles: ['PROPERTY_MANAGER'],
+    listColumns: ['id', 'propertyId', 'calendarDate', 'availabilityStatus', 'basePrice', 'lastUpdated'],
     fields: [
       { key: 'propertyId', label: 'Property', type: 'reference', ref: propertyRef, required: true },
       { key: 'calendarDate', label: 'Date', type: 'date', required: true },
       { key: 'availabilityStatus', label: 'Availability', type: 'select', options: AVAILABILITY_STATUSES, help: 'Defaults to AVAILABLE.' },
-      { key: 'basePrice', label: 'Base price', type: 'money', required: true, min: 0.01 },
-      { key: 'minimumNights', label: 'Minimum nights', type: 'number', required: true, min: 1 },
-      { key: 'lastUpdated', label: 'Last updated', type: 'datetime', hideInForm: true },
-    ],
-  },
-  {
-    key: 'pricing-rules',
-    apiBase: '/api/pricing-rules',
-    title: 'Pricing Rules',
-    singular: 'Pricing rule',
-    icon: 'bi-tags',
-    group: 'Property',
-    listColumns: ['id', 'propertyId', 'ruleType', 'adjustment', 'adjustmentValue', 'startDate', 'endDate', 'status'],
-    filters: [{ key: 'propertyId', label: 'Property', type: 'reference', ref: propertyRef, required: true }],
-    fields: [
-      { key: 'propertyId', label: 'Property', type: 'reference', ref: propertyRef, required: true },
-      { key: 'ruleType', label: 'Rule type', type: 'select', options: PRICING_RULE_TYPES, required: true },
-      { key: 'startDate', label: 'Start date', type: 'date' },
-      { key: 'endDate', label: 'End date', type: 'date' },
-      { key: 'adjustment', label: 'Adjustment', type: 'select', options: ADJUSTMENT_TYPES, required: true },
-      { key: 'adjustmentValue', label: 'Adjustment value', type: 'number', required: true, step: 0.01, help: 'Negative allowed for a discount. PERCENT must be > -100.' },
-      { key: 'status', label: 'Status', type: 'select', options: PRICING_RULE_STATUSES, help: 'Defaults to ACTIVE.' },
+      { key: 'basePrice', label: 'Price', type: 'money', required: true, min: 0.01 },
     ],
   },
 
@@ -94,6 +78,8 @@ export const RESOURCES: ResourceConfig[] = [
     singular: 'Guest profile',
     icon: 'bi-person-badge',
     group: 'Booking',
+    // Managers may view guest profiles but not create/edit them.
+    readOnlyRoles: ['PROPERTY_MANAGER'],
     listColumns: ['id', 'name', 'email', 'phone', 'nationality', 'verificationStatus', 'reviewScore', 'bookingCount', 'status'],
     filters: [{ key: 'userId', label: 'User ID', type: 'number' }],
     fields: [
@@ -115,6 +101,13 @@ export const RESOURCES: ResourceConfig[] = [
     singular: 'Reservation',
     icon: 'bi-journal-check',
     group: 'Booking',
+    // Managers view reservations (created by the customer booking flow) but do
+    // not create them manually — they approve/reject pending requests instead.
+    readOnlyRoles: ['PROPERTY_MANAGER'],
+    patchActions: [
+      { label: 'Approve', icon: 'bi-check2-circle', suffix: '/approve', showWhen: (r) => r['status'] === 'PENDING' },
+      { label: 'Reject', icon: 'bi-x-circle', suffix: '/reject', showWhen: (r) => r['status'] === 'PENDING', variant: 'danger' },
+    ],
     listColumns: ['id', 'propertyId', 'guestId', 'checkInDate', 'checkOutDate', 'nights', 'guestCount', 'totalAmount', 'status'],
     filters: [
       { key: 'propertyId', label: 'Property', type: 'reference', ref: propertyRef },
@@ -180,6 +173,8 @@ export const RESOURCES: ResourceConfig[] = [
     singular: 'Review',
     icon: 'bi-star',
     group: 'Stay',
+    // Reviews are written by guests; managers only view them here.
+    readOnlyRoles: ['PROPERTY_MANAGER'],
     listColumns: ['id', 'reservationId', 'guestId', 'overallScore', 'cleanlinessScore', 'accuracyScore', 'locationScore', 'valueScore', 'status'],
     filters: [
       { key: 'reservationId', label: 'Reservation', type: 'reference', ref: reservationRef },
@@ -230,6 +225,8 @@ export const RESOURCES: ResourceConfig[] = [
     singular: 'Checklist item',
     icon: 'bi-check2-square',
     group: 'Housekeeping',
+    // Checklists are created/managed by housekeepers; managers only view them.
+    readOnlyRoles: ['PROPERTY_MANAGER'],
     listColumns: ['id', 'turnoverId', 'taskName', 'category', 'completed', 'status'],
     filters: [{ key: 'turnoverId', label: 'Turnover', type: 'reference', ref: turnoverRef, required: true }],
     fields: [
@@ -342,6 +339,10 @@ export const RESOURCES: ResourceConfig[] = [
     singular: 'Notification',
     icon: 'bi-bell',
     group: 'Notifications',
+    // Guests see only their own notifications and can't author them (but can
+    // still mark read / dismiss via the patch actions below).
+    roleScope: { GUEST: { param: 'userId', value: 'userId' } },
+    readOnlyRoles: ['GUEST'],
     listColumns: ['id', 'userId', 'message', 'category', 'status', 'createdDate'],
     filters: [
       { key: 'userId', label: 'User ID', type: 'number' },

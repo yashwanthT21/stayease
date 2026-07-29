@@ -4,6 +4,7 @@ import com.stayease.housekeeping.dto.TurnoverAssignmentRequest;
 import com.stayease.housekeeping.dto.TurnoverAssignmentResponse;
 import com.stayease.housekeeping.entity.TurnoverAssignment;
 import com.stayease.housekeeping.enums.TurnoverStatus;
+import com.stayease.housekeeping.enums.HousekeeperStatus;
 
 public final class TurnoverAssignmentMapper {
 
@@ -14,6 +15,8 @@ public final class TurnoverAssignmentMapper {
         TurnoverAssignment t = new TurnoverAssignment();
         t.setPropertyId(request.propertyId());
         apply(t, request);
+        // Housekeeper hasn't started yet on a brand-new assignment.
+        t.setHousekeeperStatus(HousekeeperStatus.PENDING);
         return t;
     }
 
@@ -42,6 +45,7 @@ public final class TurnoverAssignmentMapper {
                 t.getAssignedDate(),
                 t.getStartByTime(),
                 t.getCompleteByTime(),
-                t.getStatus());
+                t.getStatus(),
+                t.getHousekeeperStatus());
     }
 }

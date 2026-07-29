@@ -60,6 +60,9 @@ public class SecurityConfig {
                         // owners (and admins) may read the manager list to assign one to a property
                         .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/users/managers")
                         .hasAnyRole("OWNER", "ADMIN")
+                        // managers (and admins) may read the housekeeper list to assign a turnover
+                        .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/users/housekeepers")
+                        .hasAnyRole("PROPERTY_MANAGER", "ADMIN")
                         // all other user management: admins only
                         .requestMatchers("/api/users/**").hasRole("ADMIN")
                         // audit trail: admins & finance

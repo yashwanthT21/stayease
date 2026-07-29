@@ -16,6 +16,12 @@ public interface ReservationService {
 
     ReservationResponse update(Long id, ReservationRequest request);
 
+    /** Manager approves a PENDING reservation: holds the dates + CONFIRMED. */
+    ReservationResponse approve(Long id);
+
+    /** Manager rejects a PENDING reservation: CANCELLED (dates stay free). */
+    ReservationResponse reject(Long id);
+
     void delete(Long id);
 
     /** Existence check used by the Stay and Housekeeping modules. */

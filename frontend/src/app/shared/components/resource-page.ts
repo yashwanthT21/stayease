@@ -55,13 +55,16 @@ export class ResourcePageComponent implements OnInit {
   readonly deleteTarget = signal<Row | null>(null);
 
   // Whether required filters are all satisfied (else the list stays gated).
-  readonly gated = computed(() => {
+  // NOTE: this MUST be a method, not a computed() — it reads reactive-form
+  // values (not signals), so a computed would memoize its first result forever
+  // and the list would never un-gate once a required filter is chosen.
+  gated(): boolean {
     const missing = (this.config?.filters ?? []).filter((f) => f.required);
     return missing.some((f) => {
       const v = this.filterForm?.get(f.key)?.value;
       return v === null || v === undefined || v === '';
     });
-  });
+  }
 
   readonly filteredRows = computed(() => {
     const term = this.search().trim().toLowerCase();
@@ -184,6 +187,14 @@ export class ResourcePageComponent implements OnInit {
   openCreate(): void {
     this.editingId.set(null);
     this.form = this.buildForm(null);
+    // Seed the form from any active filters so, e.g., creating a checklist while
+    // viewing a turnover defaults to that turnover.
+    for (const f of this.config.filters ?? []) {
+      const fv = this.filterForm.get(f.key)?.value;
+      if (fv !== null && fv !== undefined && fv !== '' && this.form.get(f.key)) {
+        this.form.get(f.key)!.setValue(fv);
+      }
+    }
     this.modalOpen.set(true);
   }
 
@@ -265,6 +276,13 @@ export class ResourcePageComponent implements OnInit {
         this.saving.set(false);
         this.modalOpen.set(false);
         this.toast.success(`${this.config.singular} ${id === null ? 'created' : 'updated'}.`);
+        // Make the saved row visible even when the list is gated by a required
+        // filter (e.g. checklists require a turnoverId): adopt the item's value.
+        for (const f of this.config.filters ?? []) {
+          if (f.required && payload[f.key] !== null && payload[f.key] !== undefined && payload[f.key] !== '') {
+            this.filterForm.get(f.key)?.setValue(payload[f.key]);
+          }
+        }
         this.load();
       },
       error: () => this.saving.set(false),
@@ -307,6 +325,15 @@ export class ResourcePageComponent implements OnInit {
 
   visiblePatchActions(row: Row): PatchAction[] {
     return (this.config.patchActions ?? []).filter((a) => !a.showWhen || a.showWhen(row));
+  }
+
+  /** True when this resource is view-only — globally, or for the current role. */
+  isReadOnly(): boolean {
+    if (this.config.readOnly) {
+      return true;
+    }
+    const role = this.auth.role();
+    return !!(role && this.config.readOnlyRoles?.includes(role));
   }
 
   // ---------------- table helpers ----------------

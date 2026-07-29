@@ -18,6 +18,13 @@
               <i class="bi {{ item.icon }}"></i><span>{{ item.title }}</span>
             </a>
           }
+        } @else if (isGuest()) {
+          <div class="se-group-title">Guest</div>
+          @for (item of guestNav; track item.path) {
+            <a class="nav-link" [routerLink]="item.path" routerLinkActive="active">
+              <i class="bi {{ item.icon }}"></i><span>{{ item.title }}</span>
+            </a>
+          }
         } @else {
           <a class="nav-link" routerLink="/dashboard" routerLinkActive="active">
             <i class="bi bi-speedometer2"></i><span>Dashboard</span>

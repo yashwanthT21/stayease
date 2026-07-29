@@ -1,6 +1,7 @@
 package com.stayease.housekeeping.dto;
 
 import com.stayease.housekeeping.enums.TurnoverStatus;
+import com.stayease.housekeeping.enums.HousekeeperStatus;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -14,6 +15,7 @@ public record TurnoverAssignmentResponse(
         LocalDate assignedDate,
         LocalDateTime startByTime,
         LocalDateTime completeByTime,
-        TurnoverStatus status
+        TurnoverStatus status,
+        HousekeeperStatus housekeeperStatus
 ) {
 }

@@ -3,6 +3,7 @@ package com.stayease.booking.service;
 import com.stayease.booking.dto.ReservationRequest;
 import com.stayease.booking.dto.ReservationResponse;
 import com.stayease.booking.entity.Reservation;
+import com.stayease.booking.enums.ReservationStatus;
 import com.stayease.booking.mapper.ReservationMapper;
 import com.stayease.booking.repository.ReservationRepository;
 import com.stayease.common.client.PropertyClient;
@@ -71,6 +72,31 @@ public class ReservationServiceImpl implements ReservationService {
         Reservation reservation = findOrThrow(id);
         validateReferencesAndDates(request);
         ReservationMapper.updateEntity(reservation, request);
+        return ReservationMapper.toResponse(repository.save(reservation));
+    }
+
+    @Override
+    public ReservationResponse approve(Long id) {
+        Reservation reservation = findOrThrow(id);
+        if (reservation.getStatus() != ReservationStatus.PENDING) {
+            throw new IllegalArgumentException("Only a pending reservation can be approved");
+        }
+        // Hold the dates now (they were left AVAILABLE while pending). This
+        // throws if any night was taken in the meantime, so the transaction
+        // rolls back and the reservation stays PENDING.
+        propertyClient.markRangeBooked(
+                reservation.getPropertyId(), reservation.getCheckInDate(), reservation.getCheckOutDate());
+        reservation.setStatus(ReservationStatus.CONFIRMED);
+        return ReservationMapper.toResponse(repository.save(reservation));
+    }
+
+    @Override
+    public ReservationResponse reject(Long id) {
+        Reservation reservation = findOrThrow(id);
+        if (reservation.getStatus() != ReservationStatus.PENDING) {
+            throw new IllegalArgumentException("Only a pending reservation can be rejected");
+        }
+        reservation.setStatus(ReservationStatus.CANCELLED);
         return ReservationMapper.toResponse(repository.save(reservation));
     }
 

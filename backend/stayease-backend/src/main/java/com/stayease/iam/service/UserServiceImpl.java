@@ -66,6 +66,15 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public List<UserResponse> getHousekeepers() {
+        return userRepository.findByRole(UserRole.HOUSEKEEPING)
+                .stream()
+                .map(UserMapper::toResponse)
+                .toList();
+    }
+
+    @Override
     @Transactional(readOnly = true)// keeps the session open in lazy load
     public UserResponse getById(Long id) {
         User user = findUserOrThrow(id);

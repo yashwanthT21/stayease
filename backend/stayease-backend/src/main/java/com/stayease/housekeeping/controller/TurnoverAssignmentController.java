@@ -2,12 +2,15 @@ package com.stayease.housekeeping.controller;
 
 import com.stayease.housekeeping.dto.TurnoverAssignmentRequest;
 import com.stayease.housekeeping.dto.TurnoverAssignmentResponse;
+import com.stayease.housekeeping.enums.HousekeeperStatus;
+import com.stayease.housekeeping.enums.TurnoverStatus;
 import com.stayease.housekeeping.service.TurnoverAssignmentService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -50,6 +53,20 @@ public class TurnoverAssignmentController {
     public ResponseEntity<TurnoverAssignmentResponse> update(
             @PathVariable Long id, @Valid @RequestBody TurnoverAssignmentRequest request) {
         return ResponseEntity.ok(service.update(id, request));
+    }
+
+    /** PATCH /api/turnovers/{id}/housekeeper-status?value=COMPLETED — housekeeper marks their work. */
+    @PatchMapping("/{id}/housekeeper-status")
+    public ResponseEntity<TurnoverAssignmentResponse> setHousekeeperStatus(
+            @PathVariable Long id, @RequestParam("value") HousekeeperStatus value) {
+        return ResponseEntity.ok(service.setHousekeeperStatus(id, value));
+    }
+
+    /** PATCH /api/turnovers/{id}/manager-status?value=COMPLETED — manager verifies + sets overall status. */
+    @PatchMapping("/{id}/manager-status")
+    public ResponseEntity<TurnoverAssignmentResponse> setManagerStatus(
+            @PathVariable Long id, @RequestParam("value") TurnoverStatus value) {
+        return ResponseEntity.ok(service.setManagerStatus(id, value));
     }
 
     @DeleteMapping("/{id}")
