@@ -1,0 +1,123 @@
+﻿
+seq result category    method path                                      expect              actual  ms name                                         
+--- ------ --------    ------ ----                                      ------              ------  -- ----                                         
+  1 PASS   Auth        POST   /api/auth/register                        201                    201 606 register ADMIN                               
+  2 PASS   Auth        POST   /api/auth/register                        201                    201 258 register FINANCE                             
+  3 PASS   Auth        POST   /api/auth/register                        201                    201 284 register OWNER                               
+  4 PASS   Auth        POST   /api/auth/register                        201                    201 260 register GUEST                               
+  5 PASS   Auth        POST   /api/auth/register                        201                    201 232 register HOUSEKEEPING                        
+  6 PASS   Auth        CHECK  -                                         true                  true   0 register returns token                       
+  7 PASS   Auth        CHECK  -                                         true                  true   0 register returns role ADMIN                  
+  8 PASS   Auth        POST   /api/auth/login                           200                    200 204 login valid                                  
+  9 PASS   Auth        CHECK  -                                         true                  true   0 login returns usable token                   
+ 10 PASS   Auth-Neg    POST   /api/auth/register                        409                    409 202 register duplicate email                     
+ 11 PASS   Auth-Neg    POST   /api/auth/register                        400                    400  34 register missing email                       
+ 12 PASS   Auth-Neg    POST   /api/auth/register                        400                    400  11 register invalid email                       
+ 13 PASS   Auth-Neg    POST   /api/auth/register                        400                    400   6 register password<6                          
+ 14 PASS   Auth-Neg    POST   /api/auth/register                        400                    400  18 register invalid role enum                   
+ 15 PASS   Auth-Neg    POST   /api/auth/login                           401                    401 210 login wrong password                         
+ 16 PASS   Auth-Neg    POST   /api/auth/login                           401                    401 196 login unknown user                           
+ 17 PASS   AuthN       GET    /api/properties                           401/403                401  30 no token -> reject                           
+ 18 PASS   AuthN       GET    /api/properties                           401/403                401   8 malformed token -> reject                    
+ 19 PASS   AuthZ       GET    /api/users                                403                    403  11 GUEST -> /users (deny)                       
+ 20 PASS   AuthZ       GET    /api/owner-statements                     403                    403  12 GUEST -> /owner-statements (deny)            
+ 21 PASS   AuthZ       GET    /api/users                                403                    403  16 FINANCE -> /users (deny)                     
+ 22 PASS   AuthZ       GET    /api/owner-statements                     200                    200 101 FINANCE -> /owner-statements (allow)         
+ 23 PASS   AuthZ       GET    /api/audit-logs                           200                    200  89 FINANCE -> /audit-logs (allow)               
+ 24 PASS   AuthZ       GET    /api/users                                200                    200  99 ADMIN -> /users (allow)                      
+ 25 PASS   AuthZ       GET    /api/audit-logs                           200                    200  62 ADMIN -> /audit-logs (allow)                 
+ 26 PASS   AuthZ       GET    /api/properties                           200                    200  85 GUEST -> /properties (allow)                 
+ 27 PASS   CRUD        POST   /api/properties                           201                    201 162 create property                              
+ 28 PASS   CRUD        CHECK  -                                         true                  true   0 property has id                              
+ 29 PASS   CRUD        POST   /api/availability                         201                    201 132 create availability                          
+ 30 PASS   CRUD        POST   /api/pricing-rules                        201                    201  77 create pricing rule                          
+ 31 PASS   CRUD        POST   /api/guests                               201                    201  99 create guest profile                         
+ 32 PASS   CRUD        POST   /api/reservations                         201                    201 142 create reservation                           
+ 33 PASS   Integrity   CHECK  -                                         true                  true   0 reservation nights computed=3                
+ 34 PASS   Integrity   CHECK  -                                         true                  true   0 reservation total=640 (540+60+40)            
+ 35 PASS   CRUD        POST   /api/check-ins                            201                    201  79 create check-in                              
+ 36 PASS   CRUD        POST   /api/check-outs                           201                    201  93 create check-out                             
+ 37 PASS   CRUD        POST   /api/reviews                              201                    201 116 create review                                
+ 38 PASS   CRUD        POST   /api/turnovers                            201                    201 129 create turnover                              
+ 39 PASS   CRUD        POST   /api/checklists                           201                    201  91 create checklist                             
+ 40 PASS   CRUD        POST   /api/maintenance-issues                   201                    201 121 create maintenance issue                     
+ 41 PASS   CRUD        POST   /api/preventive-maintenance               201                    201  63 create preventive maintenance                
+ 42 PASS   CRUD        POST   /api/owner-statements                     201                    201 106 create owner statement                       
+ 43 PASS   CRUD        POST   /api/owner-payouts                        201                    201  91 create owner payout                          
+ 44 PASS   CRUD        POST   /api/notifications                        201                    201 124 create notification                          
+ 45 PASS   CRUD        POST   /api/users                                201                    201  70 create user (admin)                          
+ 46 PASS   Read        GET    /api/properties/1                         200                    200  68 get property by id                           
+ 47 PASS   Integrity   CHECK  -                                         true                  true   0 property title round-trips                   
+ 48 PASS   Read        GET    /api/availability/1                       200                    200  37 get availability by id                       
+ 49 PASS   Read        GET    /api/pricing-rules/1                      200                    200  62 get pricing by id                            
+ 50 PASS   Read        GET    /api/guests/1                             200                    200  65 get guest by id                              
+ 51 PASS   Read        GET    /api/reservations/1                       200                    200  36 get reservation by id                        
+ 52 PASS   Read        GET    /api/check-ins/1                          200                    200  32 get check-in by id                           
+ 53 PASS   Read        GET    /api/check-outs/1                         200                    200  51 get check-out by id                          
+ 54 PASS   Read        GET    /api/reviews/1                            200                    200  40 get review by id                             
+ 55 PASS   Read        GET    /api/turnovers/1                          200                    200  49 get turnover by id                           
+ 56 PASS   Read        GET    /api/checklists/1                         200                    200  35 get checklist by id                          
+ 57 PASS   Read        GET    /api/maintenance-issues/1                 200                    200  42 get issue by id                              
+ 58 PASS   Read        GET    /api/preventive-maintenance/1             200                    200  41 get preventive by id                         
+ 59 PASS   Read        GET    /api/owner-statements/1                   200                    200  37 get statement by id                          
+ 60 PASS   Read        GET    /api/owner-payouts/1                      200                    200  58 get payout by id                             
+ 61 PASS   Read        GET    /api/notifications/1                      200                    200  43 get notification by id                       
+ 62 PASS   Read        GET    /api/users/8                              200                    200  36 get user by id                               
+ 63 PASS   Filter      GET    /api/properties?ownerId=5                 200                    200  53 list properties by ownerId                   
+ 64 PASS   Consistency CHECK  -                                         true                  true   0 created property in owner filter             
+ 65 PASS   Filter      GET    /api/reservations?propertyId=1            200                    200  45 list reservations by propertyId              
+ 66 PASS   Consistency CHECK  -                                         true                  true   0 created reservation in property filter       
+ 67 PASS   Filter      GET    /api/availability?propertyId=1            200                    200  48 list availability by propertyId              
+ 68 PASS   Filter      GET    /api/pricing-rules?propertyId=1           200                    200  65 list pricing by propertyId                   
+ 69 PASS   Filter      GET    /api/checklists?turnoverId=1              200                    200  88 list checklist by turnoverId                 
+ 70 PASS   Filter      GET    /api/owner-payouts?ownerId=5              200                    200  47 list payouts by ownerId                      
+ 71 PASS   Consistency CHECK  -                                         true                  true   0 created payout in owner filter               
+ 72 PASS   Filter      GET    /api/notifications?userId=5&status=UNREAD 200                    200  67 list notifications by user+status            
+ 73 PASS   Filter      GET    /api/check-ins?guestId=1                  200                    200  68 list check-ins by guestId                    
+ 74 PASS   Filter      GET    /api/reviews?guestId=1                    200                    200  70 list reviews by guestId                      
+ 75 PASS   Update      PUT    /api/properties/1                         200                    200 104 update property                              
+ 76 PASS   Update      GET    /api/properties/1                         200                    200  41 get property after update                    
+ 77 PASS   Consistency CHECK  -                                         true                  true   0 property update reflected (city=Porto)       
+ 78 PASS   Update      PUT    /api/notifications/1                      200                    200  59 mark notification READ                       
+ 79 PASS   Update      GET    /api/notifications/1                      200                    200  35 get notification after update                
+ 80 PASS   Consistency CHECK  -                                         true                  true   0 notification status reflected (READ)         
+ 81 PASS   Neg         POST   /api/properties                           400                    400  13 property missing title                       
+ 82 PASS   Neg         POST   /api/properties                           400                    400  18 property maxGuests<1                         
+ 83 PASS   Neg         POST   /api/properties                           400                    400  13 property maxGuests wrong type                
+ 84 PASS   Neg         POST   /api/properties                           400                    400  15 property invalid enum type                   
+ 85 PASS   Neg         POST   /api/guests                               400                    400  19 guest invalid email                          
+ 86 PASS   Neg         POST   /api/reviews                              400                    400  90 review score<1 (minimum)                     
+ 87 PASS   Neg         POST   /api/reservations                         400/500                400  41 reservation checkout<checkin (business rule) 
+ 88 PASS   Neg         POST   /api/properties                           400/404/409/500        404  31 property non-existent ownerId (FK)           
+ 89 PASS   Neg         POST   /api/properties                           400                    400  20 malformed json body                          
+ 90 PASS   Neg         GET    /api/properties/999999999                 404                    404  34 get property not-found                       
+ 91 PASS   Neg         PUT    /api/properties/999999999                 404                    404  28 update property not-found                    
+ 92 PASS   Neg         DELETE /api/properties/999999999                 404/204/500            404  22 delete property not-found                    
+ 93 PASS   Neg         GET    /api/properties/abc                       400                    400  24 get property non-numeric id (type mismatch)  
+ 94 PASS   Neg         GET    /api/availability                         400/500                500  26 list availability missing required propertyId
+ 95 PASS   Neg         GET    /api/pricing-rules                        400/500                500  27 list pricing missing required propertyId     
+ 96 PASS   Neg         PUT    /api/auth/login                           405                    405   8 wrong method on /auth/login (405)            
+ 97 PASS   Cleanup     DELETE /api/notifications/1                      204/200                204  52 delete notifications                         
+ 98 PASS   Cleanup     DELETE /api/owner-payouts/1                      204/200                204  33 delete owner-payouts                         
+ 99 PASS   Cleanup     DELETE /api/owner-statements/1                   204/200                204  29 delete owner-statements                      
+100 PASS   Cleanup     DELETE /api/checklists/1                         204/200                204  51 delete checklists                            
+101 PASS   Cleanup     DELETE /api/turnovers/1                          204/200                204  58 delete turnovers                             
+102 PASS   Cleanup     DELETE /api/reviews/1                            204/200                204  38 delete reviews                               
+103 PASS   Cleanup     DELETE /api/check-outs/1                         204/200                204  34 delete check-outs                            
+104 PASS   Cleanup     DELETE /api/check-ins/1                          204/200                204  35 delete check-ins                             
+105 PASS   Cleanup     DELETE /api/reservations/1                       204/200                204  31 delete reservations                          
+106 PASS   Cleanup     DELETE /api/pricing-rules/1                      204/200                204  64 delete pricing-rules                         
+107 PASS   Cleanup     DELETE /api/availability/1                       204/200                204  51 delete availability                          
+108 PASS   Cleanup     DELETE /api/maintenance-issues/1                 204/200                204  36 delete maintenance-issues                    
+109 PASS   Cleanup     DELETE /api/preventive-maintenance/1             204/200                204  40 delete preventive-maintenance                
+110 PASS   Cleanup     DELETE /api/guests/1                             204/200                204  32 delete guests                                
+111 PASS   Cleanup     DELETE /api/properties/1                         204/200                204  37 delete properties                            
+112 PASS   Cleanup     DELETE /api/users/8                              204/200                204  35 delete users                                 
+113 PASS   Cleanup     DELETE /api/users/3                              204/200/404/409/500    204  28 delete test user 3                           
+114 FAIL   Cleanup     DELETE /api/users/4                              204/200/404/409/500    401   7 delete test user 4                           
+115 FAIL   Cleanup     DELETE /api/users/5                              204/200/404/409/500    401   7 delete test user 5                           
+116 FAIL   Cleanup     DELETE /api/users/6                              204/200/404/409/500    401   8 delete test user 6                           
+117 FAIL   Cleanup     DELETE /api/users/7                              204/200/404/409/500    401   7 delete test user 7                           
+
+
+

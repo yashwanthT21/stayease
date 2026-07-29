@@ -1,0 +1,71 @@
+<div class="se-layout">
+  <!-- Sidebar -->
+  @if (sidebarOpen()) {
+    <aside class="se-sidebar d-flex flex-column p-2">
+      <div class="d-flex align-items-center gap-2 px-2 py-3 text-white">
+        <i class="bi bi-house-heart-fill fs-4 text-primary"></i>
+        <span class="fs-5 fw-semibold">StayEase</span>
+      </div>
+
+      <nav class="nav flex-column">
+        @if (isOwner()) {
+          <a class="nav-link" routerLink="/owner" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+            <i class="bi bi-speedometer2"></i><span>Owner Home</span>
+          </a>
+          <div class="se-group-title">Owner</div>
+          @for (item of ownerNav; track item.path) {
+            <a class="nav-link" [routerLink]="item.path" routerLinkActive="active">
+              <i class="bi {{ item.icon }}"></i><span>{{ item.title }}</span>
+            </a>
+          }
+        } @else {
+          <a class="nav-link" routerLink="/dashboard" routerLinkActive="active">
+            <i class="bi bi-speedometer2"></i><span>Dashboard</span>
+          </a>
+
+          @for (g of navGroups(); track g.group) {
+            <div class="se-group-title">{{ g.group }}</div>
+            @for (item of g.items; track item.key) {
+              <a class="nav-link" [routerLink]="['/', item.key]" routerLinkActive="active">
+                <i class="bi {{ item.icon }}"></i><span>{{ item.title }}</span>
+              </a>
+            }
+          }
+        }
+      </nav>
+    </aside>
+  }
+
+  <!-- Main column -->
+  <div class="se-main">
+    <header class="navbar navbar-expand bg-white border-bottom px-3 sticky-top">
+      <button class="btn btn-sm btn-outline-secondary me-2" (click)="toggleSidebar()" title="Toggle menu">
+        <i class="bi bi-list"></i>
+      </button>
+      <span class="navbar-brand mb-0 h6 d-none d-sm-inline">Property Management</span>
+
+      <div class="ms-auto position-relative">
+        <button class="btn btn-sm btn-light border d-flex align-items-center gap-2" (click)="toggleMenu()">
+          <i class="bi bi-person-circle fs-5"></i>
+          <span class="d-none d-md-inline">{{ auth.user()?.email }}</span>
+          <span class="badge text-bg-primary">{{ auth.role() | labelize }}</span>
+          <i class="bi bi-chevron-down small"></i>
+        </button>
+
+        @if (menuOpen()) {
+          <div class="dropdown-menu dropdown-menu-end show mt-1" style="right: 0">
+            <span class="dropdown-item-text small text-muted">User #{{ auth.user()?.userId }}</span>
+            <div class="dropdown-divider"></div>
+            <button class="dropdown-item text-danger" (click)="logout()">
+              <i class="bi bi-box-arrow-right me-2"></i>Sign out
+            </button>
+          </div>
+        }
+      </div>
+    </header>
+
+    <main class="se-content">
+      <router-outlet />
+    </main>
+  </div>
+</div>

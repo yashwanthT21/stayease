@@ -1,0 +1,65 @@
+<app-owner-page-header icon="bi-journal-check" title="Booking Summary" subtitle="Reservations and revenue across all your properties."></app-owner-page-header>
+
+<!-- KPI row -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-lg-3"><app-stat-tile label="Total bookings" [value]="loading() ? '—' : totalBookings()" icon="bi-journal-text" tone="primary" /></div>
+  <div class="col-6 col-lg-3"><app-stat-tile label="Revenue (booked)" [value]="loading() ? '—' : (totalRevenue() | currency)" icon="bi-cash-stack" tone="success" /></div>
+  <div class="col-6 col-lg-3"><app-stat-tile label="Nights sold" [value]="loading() ? '—' : totalNights()" icon="bi-moon-stars" tone="secondary" /></div>
+  <div class="col-6 col-lg-3"><app-stat-tile label="Upcoming" [value]="loading() ? '—' : upcoming()" icon="bi-clock-history" tone="warning" /></div>
+</div>
+
+<div class="card shadow-sm border-0">
+  <div class="card-header bg-white d-flex align-items-center justify-content-between flex-wrap gap-2">
+    <span class="fw-semibold">Reservations</span>
+    <div class="btn-group btn-group-sm" role="group">
+      <button type="button" class="btn" [class.btn-primary]="statusFilter() === 'ALL'" [class.btn-outline-secondary]="statusFilter() !== 'ALL'" (click)="setFilter('ALL')">All</button>
+      @for (s of statuses; track s) {
+        <button type="button" class="btn" [class.btn-primary]="statusFilter() === s" [class.btn-outline-secondary]="statusFilter() !== s" (click)="setFilter(s)">
+          {{ s | labelize }} <span class="opacity-75">({{ statusCounts()[s] }})</span>
+        </button>
+      }
+    </div>
+  </div>
+
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>ID</th>
+          <th>Property</th>
+          <th>Guest</th>
+          <th>Check-in</th>
+          <th>Check-out</th>
+          <th class="text-center">Nights</th>
+          <th class="text-center">Guests</th>
+          <th class="text-end">Total</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        @if (loading()) {
+          <tr><td colspan="9" class="text-center text-muted py-4"><div class="spinner-border spinner-border-sm text-primary me-2"></div>Loading reservations…</td></tr>
+        } @else if (filtered().length === 0) {
+          <tr><td colspan="9" class="text-center text-muted py-5"><i class="bi bi-inbox fs-3 d-block mb-2"></i>No reservations found.</td></tr>
+        } @else {
+          @for (row of filtered(); track row.reservation.id) {
+            <tr>
+              <td class="text-muted">#{{ row.reservation.id }}</td>
+              <td class="fw-semibold">{{ row.propertyTitle }}</td>
+              <td>Guest #{{ row.reservation.guestId }}</td>
+              <td>
+                {{ row.reservation.checkInDate }}
+                @if (isUpcoming(row.reservation)) { <span class="badge text-bg-warning ms-1">Upcoming</span> }
+              </td>
+              <td>{{ row.reservation.checkOutDate }}</td>
+              <td class="text-center">{{ row.reservation.nights }}</td>
+              <td class="text-center">{{ row.reservation.guestCount }}</td>
+              <td class="text-end">{{ row.reservation.totalAmount | currency }}</td>
+              <td><span class="badge {{ badge(row.reservation.status) }}">{{ row.reservation.status | labelize }}</span></td>
+            </tr>
+          }
+        }
+      </tbody>
+    </table>
+  </div>
+</div>

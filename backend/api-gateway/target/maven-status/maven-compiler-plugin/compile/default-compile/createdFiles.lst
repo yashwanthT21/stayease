@@ -1,0 +1,3 @@
+com\stayease\gateway\ApiGatewayApplication.class
+com\stayease\gateway\security\JwtService.class
+com\stayease\gateway\security\JwtAuthenticationFilter.class

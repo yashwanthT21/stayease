@@ -1,0 +1,169 @@
+<app-owner-page-header icon="bi-houses" title="Property Listing Manager" subtitle="Add, edit and publish the properties you own.">
+  <button headerActions class="btn btn-primary btn-sm" (click)="openCreate()"><i class="bi bi-plus-lg me-1"></i>New property</button>
+</app-owner-page-header>
+
+<div class="card shadow-sm border-0">
+  <div class="card-header bg-white border-bottom">
+    <div class="input-group input-group-sm" style="max-width: 320px">
+      <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
+      <input type="text" class="form-control" placeholder="Search title, city, type…" (input)="onSearch($event)" />
+    </div>
+  </div>
+
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>ID</th>
+          <th>Title</th>
+          <th>Type</th>
+          <th>City</th>
+          <th class="text-center">Guests</th>
+          <th class="text-center">Beds</th>
+          <th class="text-center">Baths</th>
+          <th>Status</th>
+          <th class="text-end">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        @if (loading()) {
+          <tr><td colspan="9" class="text-center text-muted py-4"><div class="spinner-border spinner-border-sm text-primary me-2"></div>Loading…</td></tr>
+        } @else if (filtered().length === 0) {
+          <tr><td colspan="9" class="text-center text-muted py-5"><i class="bi bi-inbox fs-3 d-block mb-2"></i>No properties yet — add your first one.</td></tr>
+        } @else {
+          @for (p of filtered(); track p.id) {
+            <tr>
+              <td class="text-muted">#{{ p.id }}</td>
+              <td class="fw-semibold">{{ p.title }}</td>
+              <td>{{ p.type | labelize }}</td>
+              <td>{{ p.city }}</td>
+              <td class="text-center">{{ p.maxGuests }}</td>
+              <td class="text-center">{{ p.bedrooms }}</td>
+              <td class="text-center">{{ p.bathrooms }}</td>
+              <td><span class="badge {{ statusBadge(p.status) }}">{{ p.status | labelize }}</span></td>
+              <td class="text-end text-nowrap">
+                <button class="btn btn-sm btn-outline-secondary me-1" (click)="openEdit(p)" title="Edit"><i class="bi bi-pencil"></i></button>
+                <button class="btn btn-sm btn-outline-danger" (click)="askDelete(p)" title="Delete"><i class="bi bi-trash"></i></button>
+              </td>
+            </tr>
+          }
+        }
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Create / edit modal -->
+@if (modalOpen()) {
+  <app-owner-dialog [title]="editingId() === null ? 'New property' : 'Edit property #' + editingId()" icon="bi-houses" size="lg" (dismiss)="closeModal()">
+    <form [formGroup]="form" (ngSubmit)="submit()">
+      <div class="modal-body">
+        <!-- Basics -->
+        <div class="se-owner-form-section">Basics</div>
+        <div class="row g-3 mb-2">
+          <div class="col-md-8">
+            <label class="form-label">Title <span class="text-danger">*</span></label>
+            <input type="text" class="form-control" formControlName="title" [class.is-invalid]="invalid('title')" maxlength="200" placeholder="e.g. Seaside Villa with Pool" />
+            <div class="invalid-feedback">A title is required (max 200 characters).</div>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Type <span class="text-danger">*</span></label>
+            <select class="form-select" formControlName="type" [class.is-invalid]="invalid('type')">
+              @for (t of types; track t) { <option [value]="t">{{ t | labelize }}</option> }
+            </select>
+          </div>
+          <div class="col-md-8">
+            <label class="form-label">City <span class="text-danger">*</span></label>
+            <input type="text" class="form-control" formControlName="city" [class.is-invalid]="invalid('city')" maxlength="120" placeholder="e.g. Lisbon" />
+            <div class="invalid-feedback">A city is required.</div>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Manager</label>
+            <select class="form-select" (change)="onManagerChange($event)">
+              <option value="" [selected]="selectedManagerId() === null">— No manager —</option>
+              @for (m of managers(); track m.id) {
+                <option [value]="m.id" [selected]="selectedManagerId() === m.id">{{ m.name }} ({{ m.email }})</option>
+              }
+            </select>
+            @if (managers().length === 0) {
+              <div class="form-text">No managers registered yet.</div>
+            }
+          </div>
+        </div>
+
+        <!-- Capacity -->
+        <div class="se-owner-form-section">Capacity</div>
+        <div class="row g-3 mb-2">
+          <div class="col-4">
+            <label class="form-label">Max guests <span class="text-danger">*</span></label>
+            <input type="number" class="form-control" formControlName="maxGuests" [class.is-invalid]="invalid('maxGuests')" min="1" />
+            <div class="invalid-feedback">At least 1 guest.</div>
+          </div>
+          <div class="col-4">
+            <label class="form-label">Bedrooms <span class="text-danger">*</span></label>
+            <input type="number" class="form-control" formControlName="bedrooms" [class.is-invalid]="invalid('bedrooms')" min="0" />
+          </div>
+          <div class="col-4">
+            <label class="form-label">Bathrooms <span class="text-danger">*</span></label>
+            <input type="number" class="form-control" formControlName="bathrooms" [class.is-invalid]="invalid('bathrooms')" min="0" />
+          </div>
+        </div>
+
+        <!-- Stay details -->
+        <div class="se-owner-form-section">Stay details</div>
+        <div class="row g-3 mb-2">
+          <div class="col-md-6">
+            <label class="form-label">Check-in time</label>
+            <input type="time" class="form-control" formControlName="checkInTime" />
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Check-out time</label>
+            <input type="time" class="form-control" formControlName="checkOutTime" />
+          </div>
+          <div class="col-12">
+            <label class="form-label">Amenities</label>
+            <textarea class="form-control" rows="2" formControlName="amenitiesList" placeholder="Wi-Fi, Pool, Parking, Air conditioning…"></textarea>
+            <div class="form-text">Separate items with commas — they appear as chips on the listing.</div>
+          </div>
+          <div class="col-12">
+            <label class="form-label">House rules</label>
+            <textarea class="form-control" rows="2" formControlName="houseRules" placeholder="No smoking, no parties, quiet hours after 10pm…"></textarea>
+          </div>
+        </div>
+
+        <!-- Publishing -->
+        <div class="se-owner-form-section">Publishing</div>
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label">Status</label>
+            <select class="form-select" formControlName="status">
+              @for (s of statuses; track s) { <option [value]="s">{{ s | labelize }}</option> }
+            </select>
+            <div class="form-text">Set to <strong>Listed</strong> to make it bookable by guests.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" (click)="closeModal()">Cancel</button>
+        <button type="submit" class="btn btn-primary" [disabled]="saving()">
+          @if (saving()) { <span class="spinner-border spinner-border-sm me-1"></span> }
+          {{ editingId() === null ? 'Create property' : 'Save changes' }}
+        </button>
+      </div>
+    </form>
+  </app-owner-dialog>
+}
+
+<!-- Delete confirm -->
+@if (deleteTarget(); as target) {
+  <app-owner-dialog title="Delete property" icon="bi-exclamation-triangle" size="md" (dismiss)="cancelDelete()">
+    <div class="modal-body">
+      Delete <strong>{{ target.title }}</strong> (#{{ target.id }})? This also removes its availability and pricing. This cannot be undone.
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-outline-secondary" (click)="cancelDelete()">Cancel</button>
+      <button type="button" class="btn btn-danger" (click)="confirmDelete()">Delete</button>
+    </div>
+  </app-owner-dialog>
+}

@@ -1,0 +1,83 @@
+<app-owner-page-header icon="bi-star" title="Review Analytics" subtitle="Guest satisfaction across all your properties."></app-owner-page-header>
+
+@if (loading()) {
+  <div class="text-center text-muted py-5"><div class="spinner-border text-primary"></div><div class="mt-2">Crunching reviews…</div></div>
+} @else if (total() === 0) {
+  <div class="card shadow-sm border-0"><div class="card-body text-center text-muted py-5">
+    <i class="bi bi-star fs-1 d-block mb-2"></i>No reviews yet for your properties.
+  </div></div>
+} @else {
+  <div class="row g-3 mb-4">
+    <!-- Overall score -->
+    <div class="col-12 col-lg-4">
+      <div class="card se-stat-card shadow-sm h-100"><div class="card-body text-center d-flex flex-column justify-content-center">
+        <div class="text-muted small text-uppercase fw-semibold mb-1">Overall rating</div>
+        <div class="display-3 fw-bold text-warning lh-1">{{ overallAvg() | number: '1.1-1' }}</div>
+        <div class="mt-2">
+          @for (i of [1,2,3,4,5]; track i) {
+            <i class="bi fs-5 text-warning" [class.bi-star-fill]="overallAvg() >= i - 0.25" [class.bi-star-half]="overallAvg() >= i - 0.75 && overallAvg() < i - 0.25" [class.bi-star]="overallAvg() < i - 0.75"></i>
+          }
+        </div>
+        <div class="text-muted small mt-2">{{ total() }} review{{ total() === 1 ? '' : 's' }}</div>
+      </div></div>
+    </div>
+
+    <!-- Category breakdown -->
+    <div class="col-12 col-lg-8">
+      <div class="card se-stat-card shadow-sm h-100"><div class="card-body">
+        <div class="text-muted small text-uppercase fw-semibold mb-3">By category</div>
+        @for (c of categories(); track c.key) {
+          <div class="mb-3">
+            <div class="d-flex justify-content-between small mb-1">
+              <span>{{ c.label }}</span>
+              <span class="fw-semibold">{{ c.avg | number: '1.1-1' }} <span class="text-muted fw-normal">/ 5</span></span>
+            </div>
+            <div class="progress" style="height: 8px">
+              <div class="progress-bar bg-warning" role="progressbar" [style.width.%]="pct(c.avg)"></div>
+            </div>
+          </div>
+        }
+      </div></div>
+    </div>
+  </div>
+
+  <div class="row g-3">
+    <!-- Distribution -->
+    <div class="col-12 col-lg-5">
+      <div class="card se-stat-card shadow-sm h-100"><div class="card-body">
+        <div class="text-muted small text-uppercase fw-semibold mb-3">Rating distribution</div>
+        @for (d of distribution(); track d.star) {
+          <div class="d-flex align-items-center gap-2 mb-2">
+            <span class="text-nowrap" style="width: 42px">{{ d.star }} <i class="bi bi-star-fill text-warning small"></i></span>
+            <div class="progress flex-grow-1" style="height: 10px">
+              <div class="progress-bar bg-success" role="progressbar" [style.width.%]="barPct(d.count)"></div>
+            </div>
+            <span class="text-muted small text-end" style="width: 32px">{{ d.count }}</span>
+          </div>
+        }
+      </div></div>
+    </div>
+
+    <!-- Recent comments -->
+    <div class="col-12 col-lg-7">
+      <div class="card se-stat-card shadow-sm h-100"><div class="card-body">
+        <div class="text-muted small text-uppercase fw-semibold mb-3">Recent comments</div>
+        @if (recent().length === 0) {
+          <div class="text-muted small">No written comments yet.</div>
+        } @else {
+          <ul class="list-unstyled mb-0">
+            @for (r of recent(); track r.id) {
+              <li class="border-bottom pb-2 mb-2">
+                <div class="d-flex justify-content-between align-items-center mb-1">
+                  <span class="badge text-bg-warning">{{ reviewOverall(r) | number: '1.1-1' }} <i class="bi bi-star-fill"></i></span>
+                  <span class="text-muted small">{{ r.submittedDate ? (r.submittedDate | slice: 0:10) : '' }}</span>
+                </div>
+                <div class="small">{{ r.comments }}</div>
+              </li>
+            }
+          </ul>
+        }
+      </div></div>
+    </div>
+  </div>
+}

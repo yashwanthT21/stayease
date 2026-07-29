@@ -1,0 +1,293 @@
+<!-- Page header -->
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+  <div>
+    <h1 class="h3 mb-0"><i class="bi {{ config.icon }} me-2"></i>{{ config.title }}</h1>
+    <small class="text-muted">{{ filteredRows().length }} record(s)</small>
+  </div>
+  @if (!config.readOnly) {
+    <button class="btn btn-primary" (click)="openCreate()">
+      <i class="bi bi-plus-lg me-1"></i>New {{ config.singular }}
+    </button>
+  }
+</div>
+
+<!-- Filters + search -->
+<div class="card se-stat-card shadow-sm mb-3">
+  <div class="card-body">
+    <div class="row g-2 align-items-end">
+      @if (config.filters?.length) {
+        <form [formGroup]="filterForm" (ngSubmit)="applyFilters()" class="col-12 col-lg-8">
+          <div class="row g-2 align-items-end">
+            @for (f of config.filters; track f.key) {
+              <div class="col-sm-6 col-md-4">
+                <label class="form-label small mb-1">{{ f.label }}</label>
+                @switch (f.type) {
+                  @case ('select') {
+                    <select class="form-select form-select-sm" [formControlName]="f.key">
+                      <option value="">All</option>
+                      @for (o of f.options; track o) {
+                        <option [value]="o">{{ o | labelize }}</option>
+                      }
+                    </select>
+                  }
+                  @case ('reference') {
+                    @if (optionsForResource(f.ref?.resourceKey).length) {
+                      <select class="form-select form-select-sm" [formControlName]="f.key">
+                        <option value="">All</option>
+                        @for (o of optionsForResource(f.ref?.resourceKey); track o.value) {
+                          <option [value]="o.value">{{ o.label }}</option>
+                        }
+                      </select>
+                    } @else {
+                      <input type="number" class="form-control form-control-sm" [formControlName]="f.key" placeholder="id" />
+                    }
+                  }
+                  @default {
+                    <input [type]="f.type === 'number' ? 'number' : 'text'" class="form-control form-control-sm" [formControlName]="f.key" />
+                  }
+                }
+              </div>
+            }
+            <div class="col-sm-6 col-md-4 d-flex gap-2">
+              <button type="submit" class="btn btn-sm btn-outline-primary">
+                <i class="bi bi-funnel me-1"></i>Apply
+              </button>
+              <button type="button" class="btn btn-sm btn-outline-secondary" (click)="clearFilters()">Clear</button>
+            </div>
+          </div>
+        </form>
+      }
+      <div class="col-12 col-lg-4 ms-lg-auto">
+        <label class="form-label small mb-1">Search (this page's data)</label>
+        <input type="search" class="form-control form-control-sm" placeholder="Filter loaded rows…" (input)="onSearch($event)" />
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Gate: required filter not chosen yet -->
+@if (gated()) {
+  <div class="alert alert-info d-flex align-items-center">
+    <i class="bi bi-info-circle me-2"></i>
+    Choose a
+    @for (f of config.filters; track f.key) {
+      @if (f.required) {<strong class="mx-1">{{ f.label }}</strong>}
+    }
+    above to load {{ config.title | lowercase }}.
+  </div>
+} @else {
+  <!-- Data table -->
+  <div class="card se-stat-card shadow-sm">
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0">
+        <thead class="table-light">
+          <tr>
+            @for (col of config.listColumns; track col) {
+              <th class="text-nowrap">{{ columnLabel(col) }}</th>
+            }
+            @if (!config.readOnly || config.patchActions?.length) {
+              <th class="text-end">Actions</th>
+            }
+          </tr>
+        </thead>
+        <tbody>
+          @if (loading()) {
+            <tr>
+              <td [attr.colspan]="config.listColumns.length + 1" class="text-center py-5">
+                <div class="spinner-border text-primary" role="status"></div>
+              </td>
+            </tr>
+          } @else if (pagedRows().length === 0) {
+            <tr>
+              <td [attr.colspan]="config.listColumns.length + 1" class="text-center text-muted py-5">
+                <i class="bi bi-inbox fs-3 d-block mb-2"></i>No records found.
+              </td>
+            </tr>
+          } @else {
+            @for (row of pagedRows(); track row.id) {
+              <tr>
+                @for (col of config.listColumns; track col) {
+                  <td class="text-nowrap">
+                    @switch (fieldFor(col)?.type) {
+                      @case ('boolean') {
+                        @if (row[col]) {
+                          <i class="bi bi-check-circle-fill text-success"></i>
+                        } @else {
+                          <i class="bi bi-dash-circle text-muted"></i>
+                        }
+                      }
+                      @case ('select') {
+                        <span class="badge {{ badgeClass(row[col]) }}">{{ row[col] | labelize }}</span>
+                      }
+                      @default {
+                        <span [class.se-truncate]="col === 'message' || col === 'action'" class="d-inline-block">{{ display(row, col) }}</span>
+                      }
+                    }
+                  </td>
+                }
+                @if (!config.readOnly || config.patchActions?.length) {
+                  <td class="text-end text-nowrap">
+                    @for (a of visiblePatchActions(row); track a.suffix) {
+                      <button class="btn btn-sm btn-outline-success me-1" [title]="a.label" (click)="runPatch(a, row)">
+                        <i class="bi {{ a.icon }}"></i>
+                      </button>
+                    }
+                    @if (!config.readOnly) {
+                      <button class="btn btn-sm btn-outline-secondary me-1" title="Edit" (click)="openEdit(row)">
+                        <i class="bi bi-pencil"></i>
+                      </button>
+                      <button class="btn btn-sm btn-outline-danger" title="Delete" (click)="askDelete(row)">
+                        <i class="bi bi-trash"></i>
+                      </button>
+                    }
+                  </td>
+                }
+              </tr>
+            }
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Pagination -->
+    @if (pageCount() > 1) {
+      <div class="card-footer d-flex justify-content-between align-items-center">
+        <small class="text-muted">Page {{ page() }} of {{ pageCount() }}</small>
+        <div class="btn-group btn-group-sm">
+          <button class="btn btn-outline-secondary" [disabled]="page() === 1" (click)="goToPage(page() - 1)">
+            <i class="bi bi-chevron-left"></i>
+          </button>
+          <button class="btn btn-outline-secondary" [disabled]="page() === pageCount()" (click)="goToPage(page() + 1)">
+            <i class="bi bi-chevron-right"></i>
+          </button>
+        </div>
+      </div>
+    }
+  </div>
+}
+
+<!-- Create / edit modal -->
+@if (modalOpen()) {
+  <div class="se-modal-backdrop"></div>
+  <div class="se-modal">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+      <div class="modal-content">
+        <form [formGroup]="form" (ngSubmit)="submit()">
+          <div class="modal-header">
+            <h5 class="modal-title">
+              {{ editingId() === null ? 'New' : 'Edit' }} {{ config.singular }}
+            </h5>
+            <button type="button" class="btn-close" (click)="closeModal()"></button>
+          </div>
+          <div class="modal-body">
+            <div class="row g-3">
+              @for (f of formFields; track f.key) {
+                <div class="col-md-6" [class.col-12]="f.type === 'textarea'">
+                  <label class="form-label">
+                    {{ f.label }}@if (f.required) {<span class="text-danger">*</span>}
+                  </label>
+
+                  @switch (f.type) {
+                    @case ('textarea') {
+                      <textarea class="form-control" rows="2" [formControlName]="f.key" [placeholder]="f.placeholder || ''"></textarea>
+                    }
+                    @case ('boolean') {
+                      <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" [formControlName]="f.key" />
+                      </div>
+                    }
+                    @case ('select') {
+                      <select class="form-select" [formControlName]="f.key">
+                        <option value="">— none —</option>
+                        @for (o of f.options; track o) {
+                          <option [value]="o">{{ o | labelize }}</option>
+                        }
+                      </select>
+                    }
+                    @case ('reference') {
+                      @if (optionsForResource(f.ref?.resourceKey).length) {
+                        <select class="form-select" [formControlName]="f.key">
+                          <option value="">— select —</option>
+                          @for (o of optionsForResource(f.ref?.resourceKey); track o.value) {
+                            <option [value]="o.value">{{ o.label }}</option>
+                          }
+                        </select>
+                      } @else {
+                        <input type="number" class="form-control" [formControlName]="f.key" placeholder="enter id" />
+                      }
+                    }
+                    @default {
+                      <input
+                        [type]="
+                          f.type === 'money' || f.type === 'number'
+                            ? 'number'
+                            : f.type === 'datetime'
+                              ? 'datetime-local'
+                              : f.type
+                        "
+                        [step]="f.type === 'money' ? '0.01' : f.step || null"
+                        class="form-control"
+                        [formControlName]="f.key"
+                        [placeholder]="f.placeholder || ''"
+                      />
+                    }
+                  }
+
+                  @if (f.help) {
+                    <div class="form-text">{{ f.help }}</div>
+                  }
+                  @if (form.get(f.key)?.invalid && form.get(f.key)?.touched) {
+                    <div class="text-danger small mt-1">
+                      @if (form.get(f.key)?.errors?.['required']) {
+                        {{ f.label }} is required.
+                      } @else if (form.get(f.key)?.errors?.['email']) {
+                        Must be a valid email.
+                      } @else if (form.get(f.key)?.errors?.['min']) {
+                        Must be at least {{ f.min }}.
+                      } @else if (form.get(f.key)?.errors?.['max']) {
+                        Must be at most {{ f.max }}.
+                      } @else if (form.get(f.key)?.errors?.['maxlength']) {
+                        Too long (max {{ f.maxLength }}).
+                      } @else {
+                        Invalid value.
+                      }
+                    </div>
+                  }
+                </div>
+              }
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-outline-secondary" (click)="closeModal()">Cancel</button>
+            <button type="submit" class="btn btn-primary" [disabled]="saving()">
+              @if (saving()) {<span class="spinner-border spinner-border-sm me-1"></span>}
+              {{ editingId() === null ? 'Create' : 'Save' }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- Delete confirmation -->
+@if (deleteTarget()) {
+  <div class="se-modal-backdrop"></div>
+  <div class="se-modal">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Delete {{ config.singular }}</h5>
+          <button type="button" class="btn-close" (click)="cancelDelete()"></button>
+        </div>
+        <div class="modal-body">
+          Delete {{ config.singular | lowercase }} <strong>#{{ deleteTarget()?.id }}</strong>? This cannot be undone.
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-outline-secondary" (click)="cancelDelete()">Cancel</button>
+          <button class="btn btn-danger" (click)="confirmDelete()">Delete</button>
+        </div>
+      </div>
+    </div>
+  </div>
+}

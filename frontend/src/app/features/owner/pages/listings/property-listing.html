@@ -1,0 +1,61 @@
+<app-owner-page-header icon="bi-building" title="Property Listing" subtitle="How your properties appear to guests.">
+  <a headerActions routerLink="/owner/properties" class="btn btn-primary btn-sm"><i class="bi bi-pencil-square me-1"></i>Manage listings</a>
+</app-owner-page-header>
+
+<!-- Status filter chips -->
+<div class="btn-group btn-group-sm mb-3" role="group">
+  <button type="button" class="btn" [class.btn-primary]="statusFilter() === 'ALL'" [class.btn-outline-secondary]="statusFilter() !== 'ALL'" (click)="setFilter('ALL')">All</button>
+  @for (s of statuses; track s) {
+    <button type="button" class="btn" [class.btn-primary]="statusFilter() === s" [class.btn-outline-secondary]="statusFilter() !== s" (click)="setFilter(s)">{{ s | labelize }}</button>
+  }
+</div>
+
+@if (loading()) {
+  <div class="text-center text-muted py-5"><div class="spinner-border text-primary" role="status"></div><div class="mt-2">Loading your listings…</div></div>
+} @else if (visible().length === 0) {
+  <div class="card shadow-sm border-0">
+    <div class="card-body text-center text-muted py-5">
+      <i class="bi bi-building fs-1 d-block mb-2"></i>
+      <p class="mb-3">No properties to show here yet.</p>
+      <a routerLink="/owner/properties" class="btn btn-primary btn-sm"><i class="bi bi-plus-lg me-1"></i>Add your first property</a>
+    </div>
+  </div>
+} @else {
+  <div class="row g-3">
+    @for (p of visible(); track p.id) {
+      <div class="col-sm-6 col-xl-4">
+        <div class="card se-owner-listing shadow-sm h-100">
+          <div class="se-owner-listing-cover d-flex align-items-center justify-content-center">
+            <i class="bi {{ typeIcon(p.type) }}"></i>
+            <span class="badge {{ statusBadge(p.status) }} se-owner-listing-status">{{ p.status | labelize }}</span>
+          </div>
+          <div class="card-body">
+            <div class="d-flex justify-content-between align-items-start">
+              <h2 class="h6 mb-1 text-truncate" [title]="p.title">{{ p.title }}</h2>
+              <span class="badge text-bg-light border ms-2 flex-shrink-0">{{ p.type | labelize }}</span>
+            </div>
+            <div class="text-muted small mb-2"><i class="bi bi-geo-alt me-1"></i>{{ p.city }}</div>
+
+            <div class="d-flex gap-3 text-muted small mb-2">
+              <span title="Guests"><i class="bi bi-people me-1"></i>{{ p.maxGuests }}</span>
+              <span title="Bedrooms"><i class="bi bi-door-open me-1"></i>{{ p.bedrooms }}</span>
+              <span title="Bathrooms"><i class="bi bi-droplet me-1"></i>{{ p.bathrooms }}</span>
+            </div>
+
+            @if (amenityChips(p).length) {
+              <div class="d-flex flex-wrap gap-1">
+                @for (a of amenityChips(p); track a) {
+                  <span class="badge rounded-pill text-bg-light border fw-normal">{{ a }}</span>
+                }
+              </div>
+            }
+          </div>
+          <div class="card-footer bg-white border-top-0 d-flex gap-2">
+            <a [routerLink]="['/owner/calendar']" [queryParams]="{ propertyId: p.id }" class="btn btn-sm btn-outline-secondary flex-fill"><i class="bi bi-calendar3 me-1"></i>Calendar</a>
+            <a [routerLink]="['/owner/bookings']" class="btn btn-sm btn-outline-secondary flex-fill"><i class="bi bi-journal-check me-1"></i>Bookings</a>
+          </div>
+        </div>
+      </div>
+    }
+  </div>
+}

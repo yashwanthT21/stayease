@@ -1,0 +1,67 @@
+spring:
+  application:
+    name: stayease-backend
+
+  datasource:
+    url: jdbc:mysql://localhost:3306/stayease?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true&createDatabaseIfNotExist=true
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD:root}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  jpa:
+    # Flyway owns the schema. We start with 'none' so the very first run can never
+    # fail on a strict type-validation quibble. Once your team confirms the app
+    # boots cleanly, switch this to 'validate' so Hibernate guards against any
+    # entity/column drift going forward. Never use 'update' or 'create' here.
+    hibernate:
+      ddl-auto: none
+    open-in-view: false
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    locations: classpath:db/migration
+
+server:
+  port: 8085
+
+# This app is now a client in the service mesh: it registers with Eureka and
+# resolves http://property-service to a live instance when validating a propertyId.
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_URL:http://localhost:8761/eureka/}
+  instance:
+    prefer-ip-address: true
+
+# The base host of property-service is a logical name resolved by the load
+# balancer; overridable for environments without Eureka.
+services:
+  property:
+    base-url: ${PROPERTY_SERVICE_URL:http://property-service}
+
+# JWT settings. In a real deployment the secret would come from an environment
+# variable / secrets manager, never be committed. It must be long enough (>=32
+# bytes) for the HS256 signing algorithm.
+app:
+  jwt:
+    secret: ${JWT_SECRET:stayease-dev-secret-key-change-me-please-0123456789abcdef}
+    expiration-ms: 86400000   # 24 hours
+
+logging:
+  level:
+    org.hibernate.SQL: debug
+
+# Swagger / OpenAPI (springdoc). Sensible defaults; the UI lives at
+# http://localhost:8085/swagger-ui.html and the raw spec at /v3/api-docs.
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    operations-sorter: method   # group operations by HTTP verb
+    tags-sorter: alpha          # list controller tags alphabetically

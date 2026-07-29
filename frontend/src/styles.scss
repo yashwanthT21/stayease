@@ -1,0 +1,313 @@
+/* StayEase global styles — Bootstrap 5 is loaded via angular.json. */
+
+:root {
+  --se-sidebar-width: 240px;
+  --se-brand: #0d6efd;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  background-color: #f5f6f8;
+}
+
+/* Layout shell */
+.se-layout {
+  display: flex;
+  min-height: 100vh;
+}
+
+.se-sidebar {
+  width: var(--se-sidebar-width);
+  flex: 0 0 var(--se-sidebar-width);
+  background: #1f2937;
+  color: #cbd5e1;
+  overflow-y: auto;
+}
+
+.se-sidebar .nav-link {
+  color: #cbd5e1;
+  border-radius: 0.375rem;
+  padding: 0.5rem 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.se-sidebar .nav-link:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+}
+
+.se-sidebar .nav-link.active {
+  background: var(--se-brand);
+  color: #fff;
+}
+
+.se-sidebar .se-group-title {
+  font-size: 0.72rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #6b7280;
+  padding: 0.75rem 0.75rem 0.25rem;
+}
+
+.se-main {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.se-content {
+  padding: 1.5rem;
+  flex: 1 1 auto;
+}
+
+/* Auth pages */
+.se-auth-wrap {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #0d6efd 0%, #6610f2 100%);
+  padding: 1rem;
+}
+
+.se-auth-card {
+  width: 100%;
+  max-width: 420px;
+}
+
+/* Reusable modal backdrop (we drive Bootstrap modal markup with a signal) */
+.se-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 1050;
+}
+
+.se-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1055;
+  overflow-y: auto;
+}
+
+/* Toasts */
+.se-toast-container {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  z-index: 1090;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.se-stat-card {
+  border: none;
+  border-radius: 0.75rem;
+}
+
+.se-truncate {
+  max-width: 260px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cursor-pointer {
+  cursor: pointer;
+}
+
+.min-w-0 {
+  min-width: 0;
+}
+
+/* =====================================================================
+   Owner workspace (owner-only screens). All classes are prefixed
+   se-owner-* / se-cal-* so nothing here touches the other roles' UI.
+   ===================================================================== */
+
+.se-owner-hero {
+  background: linear-gradient(135deg, #0d6efd, #6610f2);
+}
+
+.se-owner-tile {
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.se-owner-tile:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 0.5rem 1.25rem rgba(0, 0, 0, 0.12) !important;
+}
+
+/* KPI tile icon chip */
+.se-owner-kpi-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 0.5rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+
+/* Section labels inside the owner forms/dialogs */
+.se-owner-form-section {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #6b7280;
+  font-weight: 700;
+  margin: 1rem 0 0.5rem;
+  padding-bottom: 0.25rem;
+  border-bottom: 1px solid #eef0f3;
+}
+.se-owner-form-section:first-child {
+  margin-top: 0;
+}
+
+.se-owner-dialog .modal-title {
+  font-weight: 600;
+}
+
+/* When the caller projects a <form> (property/calendar editors), it wraps the
+   body + footer. Make that form the flex column the scrollable modal expects,
+   so the body scrolls internally and the footer/buttons stay pinned + visible. */
+.se-owner-dialog > form {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+}
+.se-owner-dialog > form > .modal-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+}
+.se-owner-dialog > form > .modal-footer {
+  flex: 0 0 auto;
+}
+
+/* Property listing gallery cards */
+.se-owner-listing {
+  border: none;
+  border-radius: 0.75rem;
+  overflow: hidden;
+}
+.se-owner-listing-cover {
+  height: 96px;
+  position: relative;
+  background: linear-gradient(135deg, rgba(13, 110, 253, 0.15), rgba(102, 16, 242, 0.15));
+  color: #0d6efd;
+  font-size: 2.5rem;
+}
+.se-owner-listing-status {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+}
+
+/* Availability calendar grid */
+.se-cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+  margin-bottom: 4px;
+}
+.se-cal-weekday {
+  text-align: center;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #6b7280;
+  font-weight: 600;
+  padding: 2px 0;
+}
+.se-cal-cell {
+  border: 1px solid #e5e7eb;
+  border-radius: 0.4rem;
+  min-height: 66px;
+  padding: 4px 6px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  width: 100%;
+  background: #fff;
+  text-align: left;
+  cursor: pointer;
+  transition: box-shadow 0.15s ease, transform 0.1s ease;
+}
+.se-cal-cell:hover:not(.se-cal-empty) {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+  transform: translateY(-1px);
+}
+.se-cal-empty {
+  background: transparent;
+  border-color: transparent;
+  cursor: default;
+}
+.se-cal-day {
+  font-weight: 600;
+  font-size: 0.85rem;
+}
+.se-cal-price {
+  font-size: 0.75rem;
+  font-weight: 600;
+  margin-top: auto;
+}
+.se-cal-tag {
+  font-size: 0.6rem;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  opacity: 0.75;
+}
+
+/* Status tints for calendar cells */
+.se-cal-cell.se-cal-available {
+  background: #f0fbf4;
+  border-left: 3px solid #198754;
+}
+.se-cal-cell.se-cal-booked {
+  background: #eef4ff;
+  border-left: 3px solid #0d6efd;
+}
+.se-cal-cell.se-cal-blocked {
+  background: #f3f4f6;
+  border-left: 3px solid #6b7280;
+}
+.se-cal-cell.se-cal-owner_use {
+  background: #f6f0fc;
+  border-left: 3px solid #6f42c1;
+}
+.se-cal-cell.se-cal-unset {
+  border-style: dashed;
+}
+
+/* Legend / status dots */
+.se-cal-dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  margin-right: 3px;
+  vertical-align: middle;
+}
+.se-cal-dot.se-cal-available {
+  background: #198754;
+}
+.se-cal-dot.se-cal-booked {
+  background: #0d6efd;
+}
+.se-cal-dot.se-cal-blocked {
+  background: #6b7280;
+}
+.se-cal-dot.se-cal-owner_use {
+  background: #6f42c1;
+}

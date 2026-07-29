@@ -1,0 +1,44 @@
+server:
+  port: 7000
+
+spring:
+  application:
+    name: api-gateway
+  cloud:
+    gateway:
+      server:
+        webflux:
+          # First match wins. Each lb:// URI is resolved to a live instance via
+          # Eureka + Spring Cloud LoadBalancer. The static auth route points at the
+          # monolith so a client can log in through the same front door and get a
+          # token; it is optional and touches no monolith code.
+          routes:
+            - id: property-service
+              uri: lb://property-service
+              predicates:
+                - Path=/api/properties/**,/api/availability/**,/api/pricing-rules/**
+            - id: notification-service
+              uri: lb://notification-service
+              predicates:
+                - Path=/api/notifications/**
+            - id: iam-auth-passthrough
+              uri: http://localhost:8085
+              predicates:
+                - Path=/api/auth/**
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+
+# Shared secret used ONLY to verify tokens IAM signed. Must match the monolith's
+# app.jwt.secret. In production this comes from a secrets manager, never source.
+app:
+  jwt:
+    secret: ${JWT_SECRET:stayease-dev-secret-key-change-me-please-0123456789abcdef}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,gateway
