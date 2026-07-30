@@ -3,8 +3,8 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ToastService } from '../../core/services/toast.service';
 import { PropertyResponse } from '../../core/models/dtos';
 import { LabelizePipe } from '../../shared/pipes/labelize.pipe';
-import { AvailabilityCalendarComponent } from '../owner/pages/calendar/availability-calendar';
-import { BookingInput, BookingService, NotAvailableError } from './booking.service';
+import { AvailabilityCalendarComponent } from './availability-calendar';
+import { BookingInput, BookingService, NotAvailableError } from '../booking/booking.service';
 
 /**
  * The guest's Properties tab: a gallery of bookable (LISTED) properties. Picking

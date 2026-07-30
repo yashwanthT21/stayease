@@ -8,28 +8,30 @@ import {
   PropertyResponse,
   ReservationResponse,
   TurnoverAssignmentResponse,
-  TurnoverChecklistResponse,
   UserResponse,
 } from '../../core/models/dtos';
 import { HOUSEKEEPER_STATUSES, TURNOVER_STATUSES } from '../../core/models/enums';
 import { LabelizePipe } from '../../shared/pipes/labelize.pipe';
-import { OwnerDialogComponent } from '../owner/ui/owner-dialog';
+import { OwnerDialogComponent } from '../../shared/ui/owner-dialog';
+import { TurnoverChecklistComponent } from './turnover-checklist';
 
 /**
- * Manager housekeeping screen: lists turnover assignments and creates new ones.
+ * Turnover assignment screen (Housekeeping domain): lists turnover assignments
+ * and creates new ones.
  *
  * A turnover can only be created for a stay that has been CHECKED OUT — so the
  * "Reservation" picker is fed only by reservations that have a check-out record.
  * Choosing a reservation auto-fills its property; the manager then assigns a
- * housekeeper and schedules the clean.
+ * housekeeper and schedules the clean. Viewing a turnover's checklist is
+ * delegated to the child TurnoverChecklistComponent (a modal).
  */
 @Component({
-  selector: 'app-manager-turnovers',
+  selector: 'app-turnover-assignment',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [LabelizePipe, OwnerDialogComponent],
-  templateUrl: './turnovers.html',
+  imports: [LabelizePipe, OwnerDialogComponent, TurnoverChecklistComponent],
+  templateUrl: './turnover-assignment.html',
 })
-export class TurnoverManagerComponent {
+export class TurnoverAssignmentComponent {
   private crud = inject(CrudService);
   private toast = inject(ToastService);
   private auth = inject(AuthService);
@@ -61,10 +63,14 @@ export class TurnoverManagerComponent {
   protected readonly startByTime = signal('');
   protected readonly completeByTime = signal('');
 
-  // ---- "view checklist" modal state ----
+  // ---- "view checklist" modal: which turnover is open. The loading + items
+  //      live in the child TurnoverChecklistComponent; here we only track the
+  //      selection and its header title. ----
   protected readonly checklistFor = signal<TurnoverAssignmentResponse | null>(null);
-  protected readonly checklistLoading = signal(false);
-  protected readonly checklistItems = signal<TurnoverChecklistResponse[]>([]);
+  protected readonly checklistTitle = computed(() => {
+    const t = this.checklistFor();
+    return t ? this.propertyTitle(t.propertyId) : '';
+  });
 
   protected readonly selectedReservation = computed(
     () => this.checkedOutReservations().find((r) => r.id === this.reservationId()) ?? null,
@@ -231,24 +237,6 @@ export class TurnoverManagerComponent {
 
   protected hkBadge(status: string): string {
     return status === 'COMPLETED' ? 'text-bg-success' : 'text-bg-secondary';
-  }
-
-  /** Open a read-only view of a turnover's checklist items. */
-  protected viewChecklist(t: TurnoverAssignmentResponse): void {
-    this.checklistFor.set(t);
-    this.checklistItems.set([]);
-    this.checklistLoading.set(true);
-    this.crud.list<TurnoverChecklistResponse>('/api/checklists', { turnoverId: t.id }).subscribe({
-      next: (items) => {
-        this.checklistItems.set(items);
-        this.checklistLoading.set(false);
-      },
-      error: () => this.checklistLoading.set(false),
-    });
-  }
-
-  protected closeChecklist(): void {
-    this.checklistFor.set(null);
   }
 
   /** Housekeeper marks their own work Pending/Completed. */

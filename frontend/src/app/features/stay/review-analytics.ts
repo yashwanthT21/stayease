@@ -1,8 +1,8 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { DecimalPipe, SlicePipe } from '@angular/common';
-import { OwnerDataService } from '../../data/owner-data.service';
-import { GuestReviewResponse } from '../../../../core/models/dtos';
-import { OwnerPageHeaderComponent } from '../../ui/owner-page-header';
+import { OwnerDataService } from '../../core/services/owner-data.service';
+import { GuestReviewResponse } from '../../core/models/dtos';
+import { OwnerPageHeaderComponent } from '../../shared/ui/owner-page-header';
 
 interface CategoryStat {
   key: string;

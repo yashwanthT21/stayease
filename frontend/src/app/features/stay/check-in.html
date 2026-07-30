@@ -1,0 +1,137 @@
+<app-owner-page-header icon="bi-box-arrow-in-right" title="Check-ins" subtitle="Record and manage guest arrivals for each reservation.">
+  <button headerActions class="btn btn-primary btn-sm" (click)="openCreate()"><i class="bi bi-plus-lg me-1"></i>New check-in</button>
+</app-owner-page-header>
+
+<div class="card shadow-sm border-0">
+  <div class="card-header bg-white border-bottom">
+    <div class="input-group input-group-sm" style="max-width: 320px">
+      <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
+      <input type="text" class="form-control" placeholder="Search reservation, guest, status…" (input)="onSearch($event)" />
+    </div>
+  </div>
+
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>ID</th>
+          <th>Reservation</th>
+          <th>Guest</th>
+          <th>Actual check-in</th>
+          <th>Access method</th>
+          <th class="text-center">Welcome pack</th>
+          <th>Status</th>
+          <th class="text-end">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        @if (loading()) {
+          <tr><td colspan="8" class="text-center text-muted py-4"><div class="spinner-border spinner-border-sm text-primary me-2"></div>Loading…</td></tr>
+        } @else if (filtered().length === 0) {
+          <tr><td colspan="8" class="text-center text-muted py-5"><i class="bi bi-inbox fs-3 d-block mb-2"></i>No check-ins recorded yet.</td></tr>
+        } @else {
+          @for (c of filtered(); track c.id) {
+            <tr>
+              <td class="text-muted">#{{ c.id }}</td>
+              <td>{{ reservationLabel(c.reservationId) }}</td>
+              <td>{{ guestLabel(c.guestId) }}</td>
+              <td>{{ fmtDateTime(c.actualCheckIn) }}</td>
+              <td>{{ (c.accessMethod | labelize) || '—' }}</td>
+              <td class="text-center">
+                @if (c.welcomePackSent) {
+                  <i class="bi bi-check-circle-fill text-success" title="Sent"></i>
+                } @else {
+                  <i class="bi bi-dash text-muted" title="Not sent"></i>
+                }
+              </td>
+              <td><span class="badge {{ statusBadge(c.status) }}">{{ c.status | labelize }}</span></td>
+              <td class="text-end text-nowrap">
+                <button class="btn btn-sm btn-outline-secondary me-1" (click)="openEdit(c)" title="Edit"><i class="bi bi-pencil"></i></button>
+                <button class="btn btn-sm btn-outline-danger" (click)="askDelete(c)" title="Delete"><i class="bi bi-trash"></i></button>
+              </td>
+            </tr>
+          }
+        }
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Create / edit modal -->
+@if (modalOpen()) {
+  <app-owner-dialog [title]="editingId() === null ? 'New check-in' : 'Edit check-in #' + editingId()" icon="bi-box-arrow-in-right" size="lg" (dismiss)="closeModal()">
+    <form [formGroup]="form" (ngSubmit)="submit()">
+      <div class="modal-body">
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label">Reservation <span class="text-danger">*</span></label>
+            <select class="form-select" [class.is-invalid]="reservationMissing()" (change)="onReservationChange($event)">
+              <option value="" [selected]="selectedReservationId() === null">— Select a reservation —</option>
+              @for (r of reservations(); track r.id) {
+                <option [value]="r.id" [selected]="selectedReservationId() === r.id">#{{ r.id }} · {{ r.checkInDate }} → {{ r.checkOutDate }}</option>
+              }
+            </select>
+            <div class="invalid-feedback">A reservation is required.</div>
+            @if (reservations().length === 0) { <div class="form-text">No reservations available.</div> }
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Guest <span class="text-danger">*</span></label>
+            <select class="form-select" [class.is-invalid]="guestMissing()" (change)="onGuestChange($event)">
+              <option value="" [selected]="selectedGuestId() === null">— Select a guest —</option>
+              @for (g of guests(); track g.id) {
+                <option [value]="g.id" [selected]="selectedGuestId() === g.id">#{{ g.id }} · {{ g.name }}</option>
+              }
+            </select>
+            <div class="invalid-feedback">A guest is required.</div>
+            @if (guests().length === 0) { <div class="form-text">No guests available.</div> }
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Actual check-in</label>
+            <input type="datetime-local" class="form-control" formControlName="actualCheckIn" />
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Access method</label>
+            <select class="form-select" formControlName="accessMethod">
+              <option value="">— None —</option>
+              @for (a of accessMethods; track a) { <option [value]="a">{{ a | labelize }}</option> }
+            </select>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Status</label>
+            <select class="form-select" formControlName="status">
+              @for (s of statuses; track s) { <option [value]="s">{{ s | labelize }}</option> }
+            </select>
+            <div class="form-text">Defaults to Pending.</div>
+          </div>
+          <div class="col-md-6 d-flex align-items-end">
+            <div class="form-check mb-2">
+              <input type="checkbox" class="form-check-input" id="welcomePackSent" formControlName="welcomePackSent" />
+              <label class="form-check-label" for="welcomePackSent">Welcome pack sent</label>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" (click)="closeModal()">Cancel</button>
+        <button type="submit" class="btn btn-primary" [disabled]="saving()">
+          @if (saving()) { <span class="spinner-border spinner-border-sm me-1"></span> }
+          {{ editingId() === null ? 'Create check-in' : 'Save changes' }}
+        </button>
+      </div>
+    </form>
+  </app-owner-dialog>
+}
+
+<!-- Delete confirm -->
+@if (deleteTarget(); as target) {
+  <app-owner-dialog title="Delete check-in" icon="bi-exclamation-triangle" size="md" (dismiss)="cancelDelete()">
+    <div class="modal-body">
+      Delete check-in <strong>#{{ target.id }}</strong>? This cannot be undone.
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-outline-secondary" (click)="cancelDelete()">Cancel</button>
+      <button type="button" class="btn btn-danger" (click)="confirmDelete()">Delete</button>
+    </div>
+  </app-owner-dialog>
+}

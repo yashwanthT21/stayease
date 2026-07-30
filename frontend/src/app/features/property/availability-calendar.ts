@@ -2,14 +2,14 @@ import { ChangeDetectionStrategy, Component, OnInit, computed, inject, input, si
 import { CurrencyPipe } from '@angular/common';
 import { ActivatedRoute } from '@angular/router';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
-import { CrudService } from '../../../../core/services/crud.service';
-import { ToastService } from '../../../../core/services/toast.service';
-import { OwnerDataService } from '../../data/owner-data.service';
-import { AvailabilityCalendarResponse, PropertyResponse } from '../../../../core/models/dtos';
-import { AVAILABILITY_STATUSES, AvailabilityStatus } from '../../../../core/models/enums';
-import { LabelizePipe } from '../../../../shared/pipes/labelize.pipe';
-import { OwnerPageHeaderComponent } from '../../ui/owner-page-header';
-import { OwnerDialogComponent } from '../../ui/owner-dialog';
+import { CrudService } from '../../core/services/crud.service';
+import { ToastService } from '../../core/services/toast.service';
+import { OwnerDataService } from '../../core/services/owner-data.service';
+import { AvailabilityCalendarResponse, PropertyResponse } from '../../core/models/dtos';
+import { AVAILABILITY_STATUSES, AvailabilityStatus } from '../../core/models/enums';
+import { LabelizePipe } from '../../shared/pipes/labelize.pipe';
+import { OwnerPageHeaderComponent } from '../../shared/ui/owner-page-header';
+import { OwnerDialogComponent } from '../../shared/ui/owner-dialog';
 
 interface DayCell {
   date: string; // yyyy-MM-dd

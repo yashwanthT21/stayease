@@ -1,10 +1,10 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { AuthService } from '../../../../core/auth/auth.service';
-import { OwnerDataService } from '../../data/owner-data.service';
-import { OWNER_NAV } from '../../owner-nav';
-import { PropertyResponse } from '../../../../core/models/dtos';
-import { StatTileComponent } from '../../ui/stat-tile';
+import { AuthService } from '../../core/auth/auth.service';
+import { OwnerDataService } from '../../core/services/owner-data.service';
+import { OWNER_NAV } from './owner-nav';
+import { PropertyResponse } from '../../core/models/dtos';
+import { StatTileComponent } from '../../shared/ui/stat-tile';
 
 /**
  * The owner's landing hub: a welcome banner, a handful of portfolio KPIs and a

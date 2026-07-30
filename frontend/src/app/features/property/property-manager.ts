@@ -1,13 +1,13 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
-import { CrudService } from '../../../../core/services/crud.service';
-import { ToastService } from '../../../../core/services/toast.service';
-import { OwnerDataService } from '../../data/owner-data.service';
-import { PropertyResponse, UserResponse } from '../../../../core/models/dtos';
-import { PROPERTY_STATUSES, PROPERTY_TYPES } from '../../../../core/models/enums';
-import { LabelizePipe } from '../../../../shared/pipes/labelize.pipe';
-import { OwnerPageHeaderComponent } from '../../ui/owner-page-header';
-import { OwnerDialogComponent } from '../../ui/owner-dialog';
+import { CrudService } from '../../core/services/crud.service';
+import { ToastService } from '../../core/services/toast.service';
+import { OwnerDataService } from '../../core/services/owner-data.service';
+import { PropertyResponse, UserResponse } from '../../core/models/dtos';
+import { PROPERTY_STATUSES, PROPERTY_TYPES } from '../../core/models/enums';
+import { LabelizePipe } from '../../shared/pipes/labelize.pipe';
+import { OwnerPageHeaderComponent } from '../../shared/ui/owner-page-header';
+import { OwnerDialogComponent } from '../../shared/ui/owner-dialog';
 
 /**
  * The owner's property CRUD screen. Identical contract to the generic resource

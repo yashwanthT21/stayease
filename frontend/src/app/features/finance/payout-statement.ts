@@ -1,11 +1,11 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { CurrencyPipe } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
-import { OwnerDataService } from '../../data/owner-data.service';
-import { OwnerPayoutResponse, OwnerStatementResponse } from '../../../../core/models/dtos';
-import { LabelizePipe } from '../../../../shared/pipes/labelize.pipe';
-import { OwnerPageHeaderComponent } from '../../ui/owner-page-header';
-import { StatTileComponent } from '../../ui/stat-tile';
+import { OwnerDataService } from '../../core/services/owner-data.service';
+import { OwnerPayoutResponse, OwnerStatementResponse } from '../../core/models/dtos';
+import { LabelizePipe } from '../../shared/pipes/labelize.pipe';
+import { OwnerPageHeaderComponent } from '../../shared/ui/owner-page-header';
+import { StatTileComponent } from '../../shared/ui/stat-tile';
 
 /**
  * The owner's financial view: monthly statements and the payouts against them.

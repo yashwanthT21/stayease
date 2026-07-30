@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { Observable, catchError, forkJoin, map, of, switchMap } from 'rxjs';
-import { CrudService } from '../../../core/services/crud.service';
-import { AuthService } from '../../../core/auth/auth.service';
+import { CrudService } from './crud.service';
+import { AuthService } from '../auth/auth.service';
 import {
   AvailabilityCalendarResponse,
   GuestReviewResponse,
@@ -10,7 +10,7 @@ import {
   PropertyResponse,
   ReservationResponse,
   UserResponse,
-} from '../../../core/models/dtos';
+} from '../models/dtos';
 
 /** A property together with the reservations booked against it. */
 export interface PropertyReservations {

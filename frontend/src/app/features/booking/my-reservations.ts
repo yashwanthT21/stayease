@@ -4,7 +4,7 @@ import { forkJoin } from 'rxjs';
 import { ToastService } from '../../core/services/toast.service';
 import { ReservationResponse } from '../../core/models/dtos';
 import { LabelizePipe } from '../../shared/pipes/labelize.pipe';
-import { OwnerDialogComponent } from '../owner/ui/owner-dialog';
+import { OwnerDialogComponent } from '../../shared/ui/owner-dialog';
 import { BookingService, ReviewInput } from './booking.service';
 
 interface Category {

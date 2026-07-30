@@ -1,10 +1,14 @@
 import { ResourceConfig } from '../shared/crud/resource-config';
+// Stay-domain screen config is owned by the stay module and composed in below.
+import { CHECK_IN_RESOURCE } from '../features/stay/check-in.resource';
+import { CHECK_OUT_RESOURCE } from '../features/stay/check-out.resource';
+import { REVIEW_RESOURCE } from '../features/stay/review.resource';
 import {
-  ACCESS_METHODS, AVAILABILITY_STATUSES, BOOKING_SOURCES, CHECK_IN_STATUSES,
-  CHECK_OUT_STATUSES, CHECKLIST_CATEGORIES, CHECKLIST_STATUSES, GUEST_STATUSES, MAINTENANCE_CATEGORIES,
+  AVAILABILITY_STATUSES, BOOKING_SOURCES,
+  CHECKLIST_CATEGORIES, CHECKLIST_STATUSES, GUEST_STATUSES, MAINTENANCE_CATEGORIES,
   MAINTENANCE_PRIORITIES, MAINTENANCE_STATUSES, NOTIFICATION_CATEGORIES, NOTIFICATION_STATUSES,
   PAYOUT_STATUSES, PREVENTIVE_FREQUENCIES, PREVENTIVE_STATUSES,
-  PROPERTY_STATUSES, PROPERTY_TYPES, REPORTED_BY_TYPES, RESERVATION_STATUSES, REVIEW_STATUSES,
+  PROPERTY_STATUSES, PROPERTY_TYPES, REPORTED_BY_TYPES, RESERVATION_STATUSES,
   STATEMENT_STATUSES, TURNOVER_STATUSES, USER_ROLES, USER_STATUSES, VERIFICATION_STATUSES,
 } from './models/enums';
 
@@ -130,69 +134,12 @@ export const RESOURCES: ResourceConfig[] = [
   },
 
   // ============================= STAY =============================
-  {
-    key: 'check-ins',
-    apiBase: '/api/check-ins',
-    title: 'Check-ins',
-    singular: 'Check-in',
-    icon: 'bi-box-arrow-in-right',
-    group: 'Stay',
-    roles: ['GUEST', 'PROPERTY_MANAGER'],
-    listColumns: ['id', 'reservationId', 'guestId', 'actualCheckIn', 'accessMethod', 'welcomePackSent', 'status'],
-    filters: [{ key: 'guestId', label: 'Guest', type: 'reference', ref: guestRef }],
-    fields: [
-      { key: 'reservationId', label: 'Reservation', type: 'reference', ref: reservationRef, required: true },
-      { key: 'guestId', label: 'Guest', type: 'reference', ref: guestRef, required: true },
-      { key: 'actualCheckIn', label: 'Actual check-in', type: 'datetime' },
-      { key: 'accessMethod', label: 'Access method', type: 'select', options: ACCESS_METHODS },
-      { key: 'welcomePackSent', label: 'Welcome pack sent', type: 'boolean' },
-      { key: 'status', label: 'Status', type: 'select', options: CHECK_IN_STATUSES, help: 'Defaults to PENDING.' },
-    ],
-  },
-  {
-    key: 'check-outs',
-    apiBase: '/api/check-outs',
-    title: 'Check-outs',
-    singular: 'Check-out',
-    icon: 'bi-box-arrow-right',
-    group: 'Stay',
-    listColumns: ['id', 'reservationId', 'actualCheckOut', 'damageNoted', 'depositReleased', 'status'],
-    fields: [
-      { key: 'reservationId', label: 'Reservation', type: 'reference', ref: reservationRef, required: true },
-      { key: 'actualCheckOut', label: 'Actual check-out', type: 'datetime' },
-      { key: 'damageNoted', label: 'Damage noted', type: 'boolean' },
-      { key: 'damageDescription', label: 'Damage description', type: 'textarea' },
-      { key: 'depositReleased', label: 'Deposit released', type: 'boolean' },
-      { key: 'status', label: 'Status', type: 'select', options: CHECK_OUT_STATUSES, help: 'Defaults to CHECKED_OUT.' },
-    ],
-  },
-  {
-    key: 'reviews',
-    apiBase: '/api/reviews',
-    title: 'Guest Reviews',
-    singular: 'Review',
-    icon: 'bi-star',
-    group: 'Stay',
-    // Reviews are written by guests; managers only view them here.
-    readOnlyRoles: ['PROPERTY_MANAGER'],
-    listColumns: ['id', 'reservationId', 'guestId', 'overallScore', 'cleanlinessScore', 'accuracyScore', 'locationScore', 'valueScore', 'status'],
-    filters: [
-      { key: 'reservationId', label: 'Reservation', type: 'reference', ref: reservationRef },
-      { key: 'guestId', label: 'Guest', type: 'reference', ref: guestRef },
-    ],
-    fields: [
-      { key: 'reservationId', label: 'Reservation', type: 'reference', ref: reservationRef, required: true },
-      { key: 'guestId', label: 'Guest', type: 'reference', ref: guestRef, required: true },
-      { key: 'cleanlinessScore', label: 'Cleanliness (1-5)', type: 'number', min: 1, max: 5 },
-      { key: 'accuracyScore', label: 'Accuracy (1-5)', type: 'number', min: 1, max: 5 },
-      { key: 'locationScore', label: 'Location (1-5)', type: 'number', min: 1, max: 5 },
-      { key: 'valueScore', label: 'Value (1-5)', type: 'number', min: 1, max: 5 },
-      { key: 'comments', label: 'Comments', type: 'textarea' },
-      { key: 'status', label: 'Status', type: 'select', options: REVIEW_STATUSES, help: 'Defaults to PUBLISHED.' },
-      { key: 'overallScore', label: 'Overall', type: 'number', hideInForm: true },
-      { key: 'submittedDate', label: 'Submitted', type: 'datetime', hideInForm: true },
-    ],
-  },
+  // Screen config for the Stay domain is owned by the stay module
+  // (features/stay/*.resource.ts) — check-in, check-out and reviews — and
+  // composed in here in their original order. Behaviour is unchanged.
+  CHECK_IN_RESOURCE,
+  CHECK_OUT_RESOURCE,
+  REVIEW_RESOURCE,
 
   // ========================= HOUSEKEEPING =========================
   {

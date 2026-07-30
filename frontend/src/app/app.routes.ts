@@ -3,16 +3,18 @@ import { authGuard } from './core/guards/auth.guard';
 import { roleGuard } from './core/guards/role.guard';
 import { RESOURCES } from './core/registry';
 import { ShellComponent } from './layout/shell';
-import { LoginComponent } from './features/auth/login';
-import { RegisterComponent } from './features/auth/register';
+import { LoginComponent } from './features/iam/login';
+import { RegisterComponent } from './features/iam/register';
 import { DashboardComponent } from './features/dashboard/dashboard';
 import { ResourcePageComponent } from './shared/components/resource-page';
 import { OWNER_ROUTES } from './features/owner/owner.routes';
-import { AvailabilityCalendarComponent } from './features/owner/pages/calendar/availability-calendar';
-import { BrowsePropertiesComponent } from './features/guest/browse-properties';
-import { MyReservationsComponent } from './features/guest/my-reservations';
-import { GuestProfileComponent } from './features/guest/guest-profile';
-import { TurnoverManagerComponent } from './features/manager/turnovers';
+import { AvailabilityCalendarComponent } from './features/property/availability-calendar';
+import { BrowsePropertiesComponent } from './features/property/browse-properties';
+import { MyReservationsComponent } from './features/booking/my-reservations';
+import { GuestProfileComponent } from './features/booking/guest-profile';
+import { TurnoverAssignmentComponent } from './features/housekeeping/turnover-assignment';
+import { CheckInComponent } from './features/stay/check-in';
+import { CheckOutComponent } from './features/stay/check-out';
 
 /**
  * Routes are generated from the resource registry: one CRUD route per resource,
@@ -34,15 +36,20 @@ export const routes: Routes = [
       ...OWNER_ROUTES,
       ...RESOURCES.map((r) => ({
         path: r.key,
-        // A couple of resources use bespoke screens instead of the generic CRUD:
-        //  - availability → the shared month-grid calendar
-        //  - turnovers    → the manager housekeeping screen (checked-out only)
+        // Some resources use bespoke screens instead of the generic CRUD:
+        //  - availability          → the shared month-grid calendar
+        //  - turnovers             → the housekeeping turnover-assignment screen
+        //  - check-ins/check-outs  → the stay module's hand-written CRUD screens
         component:
           r.key === 'availability'
             ? AvailabilityCalendarComponent
             : r.key === 'turnovers'
-              ? TurnoverManagerComponent
-              : ResourcePageComponent,
+              ? TurnoverAssignmentComponent
+              : r.key === 'check-ins'
+                ? CheckInComponent
+                : r.key === 'check-outs'
+                  ? CheckOutComponent
+                  : ResourcePageComponent,
         canActivate: [roleGuard],
         data: { config: r, roles: r.roles },
       })),

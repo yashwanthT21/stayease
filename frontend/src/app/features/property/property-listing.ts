@@ -1,10 +1,10 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { OwnerDataService } from '../../data/owner-data.service';
-import { PropertyResponse } from '../../../../core/models/dtos';
-import { PropertyStatus, PROPERTY_STATUSES } from '../../../../core/models/enums';
-import { LabelizePipe } from '../../../../shared/pipes/labelize.pipe';
-import { OwnerPageHeaderComponent } from '../../ui/owner-page-header';
+import { OwnerDataService } from '../../core/services/owner-data.service';
+import { PropertyResponse } from '../../core/models/dtos';
+import { PropertyStatus, PROPERTY_STATUSES } from '../../core/models/enums';
+import { LabelizePipe } from '../../shared/pipes/labelize.pipe';
+import { OwnerPageHeaderComponent } from '../../shared/ui/owner-page-header';
 
 /**
  * A visual, guest's-eye gallery of the owner's properties. Read-only on purpose

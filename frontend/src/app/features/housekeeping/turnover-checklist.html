@@ -1,0 +1,40 @@
+@if (selected(); as t) {
+  <app-owner-dialog [title]="'Checklist · ' + propertyTitle" icon="bi-check2-square" size="lg" (dismiss)="close.emit()">
+    <div class="modal-body">
+      <p class="text-muted small mb-3">
+        Turnover #{{ t.id }} · reservation {{ t.checkOutReservationId ? '#' + t.checkOutReservationId : '—' }} ·
+        housekeeper status <span class="badge {{ hkBadge(t.housekeeperStatus) }}">{{ t.housekeeperStatus | labelize }}</span>
+      </p>
+
+      @if (loading()) {
+        <div class="text-center text-muted py-4"><div class="spinner-border spinner-border-sm text-primary me-2"></div>Loading…</div>
+      } @else if (items().length === 0) {
+        <div class="text-center text-muted py-4"><i class="bi bi-inbox fs-3 d-block mb-2"></i>No checklist items for this turnover.</div>
+      } @else {
+        <div class="table-responsive">
+          <table class="table table-sm align-middle mb-0">
+            <thead class="table-light">
+              <tr><th>Task</th><th>Category</th><th class="text-center">Completed</th><th>Status</th><th>Notes</th></tr>
+            </thead>
+            <tbody>
+              @for (c of items(); track c.id) {
+                <tr>
+                  <td class="fw-semibold">{{ c.taskName }}</td>
+                  <td>{{ c.category | labelize }}</td>
+                  <td class="text-center">
+                    @if (c.completed) { <i class="bi bi-check-circle-fill text-success"></i> } @else { <i class="bi bi-dash-circle text-muted"></i> }
+                  </td>
+                  <td><span class="badge {{ c.status === 'DONE' ? 'text-bg-success' : 'text-bg-secondary' }}">{{ c.status | labelize }}</span></td>
+                  <td class="text-muted small">{{ c.notes || '—' }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-outline-secondary" (click)="close.emit()">Close</button>
+    </div>
+  </app-owner-dialog>
+}

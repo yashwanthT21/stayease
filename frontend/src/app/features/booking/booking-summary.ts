@@ -1,11 +1,11 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { CurrencyPipe } from '@angular/common';
-import { OwnerDataService } from '../../data/owner-data.service';
-import { ReservationResponse } from '../../../../core/models/dtos';
-import { RESERVATION_STATUSES, ReservationStatus } from '../../../../core/models/enums';
-import { LabelizePipe } from '../../../../shared/pipes/labelize.pipe';
-import { OwnerPageHeaderComponent } from '../../ui/owner-page-header';
-import { StatTileComponent } from '../../ui/stat-tile';
+import { OwnerDataService } from '../../core/services/owner-data.service';
+import { ReservationResponse } from '../../core/models/dtos';
+import { RESERVATION_STATUSES, ReservationStatus } from '../../core/models/enums';
+import { LabelizePipe } from '../../shared/pipes/labelize.pipe';
+import { OwnerPageHeaderComponent } from '../../shared/ui/owner-page-header';
+import { StatTileComponent } from '../../shared/ui/stat-tile';
 
 interface BookingRow {
   reservation: ReservationResponse;
