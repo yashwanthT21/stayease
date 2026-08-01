@@ -21,7 +21,7 @@
   </div>
 
   <!-- Statements -->
-  <div class="card shadow-sm border-0 mb-4">
+  <div class="card shadow-sm border-0 mb-4 overflow-hidden">
     <div class="card-header bg-white fw-semibold"><i class="bi bi-file-earmark-text me-1"></i>Statements</div>
     <div class="table-responsive">
       <table class="table table-hover align-middle mb-0">
@@ -60,7 +60,7 @@
   </div>
 
   <!-- Payouts -->
-  <div class="card shadow-sm border-0">
+  <div class="card shadow-sm border-0 overflow-hidden">
     <div class="card-header bg-white fw-semibold"><i class="bi bi-cash-coin me-1"></i>Payouts</div>
     <div class="table-responsive">
       <table class="table table-hover align-middle mb-0">
@@ -80,8 +80,8 @@
           } @else {
             @for (p of payouts(); track p.id) {
               <tr>
-                <td class="text-muted">#{{ p.id }}</td>
-                <td>#{{ p.statementId }}</td>
+                <td class="text-muted">{{ p.id }}</td>
+                <td>{{ p.statementId }}</td>
                 <td class="text-end fw-semibold">{{ p.amount | currency }}</td>
                 <td>{{ p.paymentDate || '—' }}</td>
                 <td class="text-muted">{{ p.bankAccountRef || '—' }}</td>

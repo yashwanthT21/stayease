@@ -15,6 +15,7 @@ import { GuestProfileComponent } from './features/booking/guest-profile';
 import { TurnoverAssignmentComponent } from './features/housekeeping/turnover-assignment';
 import { CheckInComponent } from './features/stay/check-in';
 import { CheckOutComponent } from './features/stay/check-out';
+import { StatementBuilderComponent } from './features/finance/statement-builder';
 
 /**
  * Routes are generated from the resource registry: one CRUD route per resource,
@@ -40,6 +41,7 @@ export const routes: Routes = [
         //  - availability          → the shared month-grid calendar
         //  - turnovers             → the housekeeping turnover-assignment screen
         //  - check-ins/check-outs  → the stay module's hand-written CRUD screens
+        //  - owner-statements      → the finance statement-builder (auto-derives amounts)
         component:
           r.key === 'availability'
             ? AvailabilityCalendarComponent
@@ -49,7 +51,9 @@ export const routes: Routes = [
                 ? CheckInComponent
                 : r.key === 'check-outs'
                   ? CheckOutComponent
-                  : ResourcePageComponent,
+                  : r.key === 'owner-statements'
+                    ? StatementBuilderComponent
+                    : ResourcePageComponent,
         canActivate: [roleGuard],
         data: { config: r, roles: r.roles },
       })),

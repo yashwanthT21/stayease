@@ -45,6 +45,13 @@ export class PropertyManagerComponent {
   protected readonly managers = signal<UserResponse[]>([]);
   protected readonly selectedManagerId = signal<number | null>(null);
 
+  // Type and status are native <select>s too. For the same zoneless reliability
+  // reason as the manager picker, they're driven by signals + (change) rather
+  // than formControlName — otherwise the first choice may not register and the
+  // form keeps the default (e.g. a "Listed" pick saving as UNLISTED).
+  protected readonly selectedType = signal<string>('APARTMENT');
+  protected readonly selectedStatus = signal<string>('UNLISTED');
+
   protected form: FormGroup = this.buildForm();
 
   protected readonly filtered = computed(() => {
@@ -77,9 +84,9 @@ export class PropertyManagerComponent {
   }
 
   private buildForm(row?: PropertyResponse): FormGroup {
+    // type & status are managed as signals (see selectedType/selectedStatus).
     return this.fb.group({
       title: [row?.title ?? '', [Validators.required, Validators.maxLength(200)]],
-      type: [row?.type ?? 'APARTMENT', [Validators.required]],
       city: [row?.city ?? '', [Validators.required, Validators.maxLength(120)]],
       maxGuests: [row?.maxGuests ?? 1, [Validators.required, Validators.min(1)]],
       bedrooms: [row?.bedrooms ?? 0, [Validators.required, Validators.min(0)]],
@@ -88,7 +95,6 @@ export class PropertyManagerComponent {
       houseRules: [row?.houseRules ?? ''],
       checkInTime: [row?.checkInTime ? String(row.checkInTime).slice(0, 5) : ''],
       checkOutTime: [row?.checkOutTime ? String(row.checkOutTime).slice(0, 5) : ''],
-      status: [row?.status ?? 'UNLISTED'],
     });
   }
 
@@ -99,6 +105,8 @@ export class PropertyManagerComponent {
   protected openCreate(): void {
     this.editingId.set(null);
     this.selectedManagerId.set(null);
+    this.selectedType.set('APARTMENT');
+    this.selectedStatus.set('UNLISTED');
     this.form = this.buildForm();
     this.modalOpen.set(true);
   }
@@ -106,6 +114,8 @@ export class PropertyManagerComponent {
   protected openEdit(row: PropertyResponse): void {
     this.editingId.set(row.id);
     this.selectedManagerId.set(row.managerId ?? null);
+    this.selectedType.set(row.type);
+    this.selectedStatus.set(row.status);
     this.form = this.buildForm(row);
     this.modalOpen.set(true);
   }
@@ -113,6 +123,14 @@ export class PropertyManagerComponent {
   protected onManagerChange(event: Event): void {
     const raw = (event.target as HTMLSelectElement).value;
     this.selectedManagerId.set(raw ? Number(raw) : null);
+  }
+
+  protected onTypeChange(event: Event): void {
+    this.selectedType.set((event.target as HTMLSelectElement).value);
+  }
+
+  protected onStatusChange(event: Event): void {
+    this.selectedStatus.set((event.target as HTMLSelectElement).value);
   }
 
   protected closeModal(): void {
@@ -136,6 +154,9 @@ export class PropertyManagerComponent {
         payload[key] = value;
       }
     }
+    // type & status come from their signals (native selects — see above).
+    payload['type'] = this.selectedType();
+    payload['status'] = this.selectedStatus();
     // Assigned manager comes from the dropdown; omit when "no manager" is chosen.
     if (this.selectedManagerId() != null) {
       payload['managerId'] = this.selectedManagerId();

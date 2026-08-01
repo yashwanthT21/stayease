@@ -60,4 +60,17 @@ export class DashboardComponent implements OnInit {
   });
 
   protected readonly totalModules = computed(() => this.groups().reduce((n, g) => n + g.items.length, 0));
+
+  private readonly tileStops: [string, string][] = [
+    ['#4f8cff', '#2563eb'],
+    ['#a855f7', '#6d28d9'],
+    ['#22d3ee', '#0891b2'],
+    ['#34d399', '#059669'],
+    ['#fbbf24', '#d97706'],
+    ['#f472b6', '#db2777'],
+  ];
+  protected tileGradient(i: number): string {
+    const [a, b] = this.tileStops[i % this.tileStops.length];
+    return `linear-gradient(135deg, ${a}, ${b})`;
+  }
 }

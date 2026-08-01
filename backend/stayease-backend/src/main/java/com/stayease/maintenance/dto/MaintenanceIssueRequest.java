@@ -4,8 +4,10 @@ import com.stayease.maintenance.enums.MaintenanceCategory;
 import com.stayease.maintenance.enums.MaintenancePriority;
 import com.stayease.maintenance.enums.MaintenanceStatus;
 import com.stayease.maintenance.enums.ReportedByType;
+import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotNull;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 /**
@@ -35,6 +37,9 @@ public record MaintenanceIssueRequest(
         Long assignedContractorId,    // optional, free-form (not a user id)
 
         LocalDateTime resolvedDate,   // optional — set when resolved
+
+        @DecimalMin(value = "0.0", message = "amountSpent cannot be negative")
+        BigDecimal amountSpent,       // optional — repair cost logged on resolution
 
         MaintenanceStatus status      // optional — defaults to OPEN
 ) {

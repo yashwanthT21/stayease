@@ -37,6 +37,7 @@ public final class MaintenanceIssueMapper {
         m.setPriority(request.priority() != null ? request.priority() : MaintenancePriority.MEDIUM);
         m.setAssignedContractorId(request.assignedContractorId());
         m.setResolvedDate(request.resolvedDate());
+        m.setAmountSpent(request.amountSpent());
         m.setStatus(request.status() != null ? request.status() : MaintenanceStatus.OPEN);
     }
 
@@ -52,6 +53,7 @@ public final class MaintenanceIssueMapper {
                 m.getAssignedContractorId(),
                 m.getReportedDate(),
                 m.getResolvedDate(),
+                m.getAmountSpent(),
                 m.getStatus());
     }
 }

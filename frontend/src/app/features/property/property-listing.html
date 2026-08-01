@@ -24,34 +24,47 @@
   <div class="row g-3">
     @for (p of visible(); track p.id) {
       <div class="col-sm-6 col-xl-4">
-        <div class="card se-owner-listing shadow-sm h-100">
-          <div class="se-owner-listing-cover d-flex align-items-center justify-content-center">
-            <i class="bi {{ typeIcon(p.type) }}"></i>
-            <span class="badge {{ statusBadge(p.status) }} se-owner-listing-status">{{ p.status | labelize }}</span>
+        <div class="se-pl-card h-100">
+          <!-- Cover -->
+          <div class="se-pl-cover" [style.background]="typeAccent(p.type)">
+            <span class="se-pl-type">{{ p.type | labelize }}</span>
+            <span class="badge {{ statusBadge(p.status) }} se-pl-status">{{ p.status | labelize }}</span>
+            <span class="se-pl-cover-icon"><i class="bi {{ typeIcon(p.type) }}"></i></span>
+            <i class="bi {{ typeIcon(p.type) }} se-pl-watermark"></i>
           </div>
-          <div class="card-body">
-            <div class="d-flex justify-content-between align-items-start">
-              <h2 class="h6 mb-1 text-truncate" [title]="p.title">{{ p.title }}</h2>
-              <span class="badge text-bg-light border ms-2 flex-shrink-0">{{ p.type | labelize }}</span>
-            </div>
-            <div class="text-muted small mb-2"><i class="bi bi-geo-alt me-1"></i>{{ p.city }}</div>
 
-            <div class="d-flex gap-3 text-muted small mb-2">
-              <span title="Guests"><i class="bi bi-people me-1"></i>{{ p.maxGuests }}</span>
-              <span title="Bedrooms"><i class="bi bi-door-open me-1"></i>{{ p.bedrooms }}</span>
-              <span title="Bathrooms"><i class="bi bi-droplet me-1"></i>{{ p.bathrooms }}</span>
+          <!-- Body -->
+          <div class="se-pl-body">
+            <h2 class="se-pl-title text-truncate" [title]="p.title">{{ p.title }}</h2>
+            <div class="se-pl-city"><i class="bi bi-geo-alt me-1"></i>{{ p.city }}</div>
+
+            <div class="se-pl-stats">
+              <div class="se-pl-stat" title="Guests">
+                <i class="bi bi-people"></i><span class="se-pl-stat-val">{{ p.maxGuests }}</span><span class="se-pl-stat-lbl">Guests</span>
+              </div>
+              <div class="se-pl-stat" title="Bedrooms">
+                <i class="bi bi-door-open"></i><span class="se-pl-stat-val">{{ p.bedrooms }}</span><span class="se-pl-stat-lbl">Beds</span>
+              </div>
+              <div class="se-pl-stat" title="Bathrooms">
+                <i class="bi bi-droplet"></i><span class="se-pl-stat-val">{{ p.bathrooms }}</span><span class="se-pl-stat-lbl">Baths</span>
+              </div>
             </div>
 
-            @if (amenityChips(p).length) {
-              <div class="d-flex flex-wrap gap-1">
-                @for (a of amenityChips(p); track a) {
-                  <span class="badge rounded-pill text-bg-light border fw-normal">{{ a }}</span>
+            @if (topAmenities(p).length) {
+              <div class="se-pl-amenities">
+                @for (a of topAmenities(p); track a) {
+                  <span class="se-pl-amenity">{{ a }}</span>
+                }
+                @if (moreAmenities(p) > 0) {
+                  <span class="se-pl-amenity se-pl-amenity-more">+{{ moreAmenities(p) }} more</span>
                 }
               </div>
             }
           </div>
-          <div class="card-footer bg-white border-top-0 d-flex gap-2">
-            <a [routerLink]="['/owner/calendar']" [queryParams]="{ propertyId: p.id }" class="btn btn-sm btn-outline-secondary flex-fill"><i class="bi bi-calendar3 me-1"></i>Calendar</a>
+
+          <!-- Actions -->
+          <div class="se-pl-foot">
+            <a [routerLink]="['/owner/calendar']" [queryParams]="{ propertyId: p.id }" class="btn btn-sm btn-outline-primary flex-fill"><i class="bi bi-calendar3 me-1"></i>Calendar</a>
             <a [routerLink]="['/owner/bookings']" class="btn btn-sm btn-outline-secondary flex-fill"><i class="bi bi-journal-check me-1"></i>Bookings</a>
           </div>
         </div>

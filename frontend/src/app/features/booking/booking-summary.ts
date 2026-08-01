@@ -1,7 +1,8 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { CurrencyPipe } from '@angular/common';
 import { OwnerDataService } from '../../core/services/owner-data.service';
-import { ReservationResponse } from '../../core/models/dtos';
+import { CrudService } from '../../core/services/crud.service';
+import { GuestProfileResponse, ReservationResponse } from '../../core/models/dtos';
 import { RESERVATION_STATUSES, ReservationStatus } from '../../core/models/enums';
 import { LabelizePipe } from '../../shared/pipes/labelize.pipe';
 import { OwnerPageHeaderComponent } from '../../shared/ui/owner-page-header';
@@ -27,11 +28,14 @@ const EARNING_STATUSES: ReservationStatus[] = ['CONFIRMED', 'ACTIVE', 'CHECKED_O
 })
 export class BookingSummaryComponent {
   private data = inject(OwnerDataService);
+  private crud = inject(CrudService);
 
   protected readonly statuses = RESERVATION_STATUSES;
   protected readonly loading = signal(true);
   protected readonly rows = signal<BookingRow[]>([]);
   protected readonly statusFilter = signal<'ALL' | ReservationStatus>('ALL');
+  /** guestId → display name, used to show the guest's name instead of their id. */
+  protected readonly guestNames = signal<Map<number, string>>(new Map());
 
   private readonly today = new Date().toISOString().slice(0, 10);
 
@@ -85,10 +89,20 @@ export class BookingSummaryComponent {
       },
       error: () => this.loading.set(false),
     });
+
+    // Resolve guest ids to names for the table (read-only lookup).
+    this.crud.list<GuestProfileResponse>('/api/guests').subscribe({
+      next: (guests) => this.guestNames.set(new Map(guests.map((g) => [g.id, g.name]))),
+      error: () => {},
+    });
   }
 
   protected setFilter(value: 'ALL' | ReservationStatus): void {
     this.statusFilter.set(value);
+  }
+
+  protected guestName(id: number): string {
+    return this.guestNames().get(id) ?? `#${id}`;
   }
 
   protected badge(status: string): string {

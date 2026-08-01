@@ -51,6 +51,10 @@ export class CheckOutComponent {
   protected readonly selectedReservationId = signal<number | null>(null);
   protected readonly attempted = signal(false);
 
+  // Status is a native <select> too — signal + (change) rather than
+  // formControlName so the first choice registers reliably in this zoneless app.
+  protected readonly selectedStatus = signal<string>('CHECKED_OUT');
+
   protected form: FormGroup = this.buildForm();
 
   protected readonly filtered = computed(() => {
@@ -81,14 +85,13 @@ export class CheckOutComponent {
     });
   }
 
-  // Only the plain (non-reference) fields live in the reactive form.
+  // Only the plain fields live in the reactive form; status is a signal.
   private buildForm(row?: CheckOutRecordResponse): FormGroup {
     return this.fb.group({
       actualCheckOut: [row?.actualCheckOut ? String(row.actualCheckOut).slice(0, 16) : ''],
       damageNoted: [row?.damageNoted ?? false],
       damageDescription: [row?.damageDescription ?? ''],
       depositReleased: [row?.depositReleased ?? false],
-      status: [row?.status ?? 'CHECKED_OUT'],
     });
   }
 
@@ -101,10 +104,15 @@ export class CheckOutComponent {
     this.selectedReservationId.set(raw ? Number(raw) : null);
   }
 
+  protected onStatusChange(event: Event): void {
+    this.selectedStatus.set((event.target as HTMLSelectElement).value);
+  }
+
   protected openCreate(): void {
     this.editingId.set(null);
     this.attempted.set(false);
     this.selectedReservationId.set(null);
+    this.selectedStatus.set('CHECKED_OUT');
     this.form = this.buildForm();
     this.modalOpen.set(true);
   }
@@ -113,6 +121,7 @@ export class CheckOutComponent {
     this.editingId.set(row.id);
     this.attempted.set(false);
     this.selectedReservationId.set(row.reservationId ?? null);
+    this.selectedStatus.set(row.status);
     this.form = this.buildForm(row);
     this.modalOpen.set(true);
   }
@@ -145,6 +154,7 @@ export class CheckOutComponent {
       }
       payload[key] = value;
     }
+    payload['status'] = this.selectedStatus(); // signal-backed select
 
     this.saving.set(true);
     const id = this.editingId();

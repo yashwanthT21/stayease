@@ -12,17 +12,17 @@ import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
   selector: 'app-owner-page-header',
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-4">
-      <div>
-        <h1 class="h4 mb-0 d-flex align-items-center gap-2">
-          @if (icon) {
-            <i class="bi {{ icon }} text-primary"></i>
-          }
-          {{ title }}
-        </h1>
-        @if (subtitle) {
-          <p class="text-muted mb-0 small">{{ subtitle }}</p>
+    <div class="d-flex align-items-center justify-content-between flex-wrap gap-3 mb-4">
+      <div class="d-flex align-items-center gap-3">
+        @if (icon) {
+          <span class="se-page-head-icon"><i class="bi {{ icon }}"></i></span>
         }
+        <div>
+          <h1 class="se-page-head-title mb-0">{{ title }}</h1>
+          @if (subtitle) {
+            <p class="se-page-head-sub mb-0">{{ subtitle }}</p>
+          }
+        </div>
       </div>
       <ng-content select="[headerActions]"></ng-content>
     </div>

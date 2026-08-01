@@ -126,6 +126,7 @@ export interface MaintenanceIssueResponse extends HasId {
   assignedContractorId?: number;
   reportedDate?: string;
   resolvedDate?: string;
+  amountSpent?: number;
   status: MaintenanceStatus;
 }
 

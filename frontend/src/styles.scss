@@ -2,7 +2,12 @@
 
 :root {
   --se-sidebar-width: 240px;
-  --se-brand: #0d6efd;
+  --se-brand: #2563eb;
+  /* Shared visual tokens used by the app-wide polish below. */
+  --se-radius: 0.9rem;
+  --se-border: #eceef3;
+  --se-shadow-sm: 0 6px 18px -12px rgba(15, 23, 42, 0.28);
+  --se-shadow-md: 0 16px 30px -16px rgba(15, 23, 42, 0.45);
 }
 
 html,
@@ -11,7 +16,8 @@ body {
 }
 
 body {
-  background-color: #f5f6f8;
+  background-color: #f4f5f9;
+  color: #0f172a;
 }
 
 /* Layout shell */
@@ -23,18 +29,22 @@ body {
 .se-sidebar {
   width: var(--se-sidebar-width);
   flex: 0 0 var(--se-sidebar-width);
-  background: #1f2937;
+  background: linear-gradient(185deg, #0f172a 0%, #1e293b 100%);
   color: #cbd5e1;
   overflow-y: auto;
+  border-right: 1px solid rgba(148, 163, 184, 0.12);
 }
 
 .se-sidebar .nav-link {
   color: #cbd5e1;
-  border-radius: 0.375rem;
-  padding: 0.5rem 0.75rem;
+  border-radius: 0.6rem;
+  padding: 0.55rem 0.8rem;
+  margin-bottom: 2px;
   display: flex;
   align-items: center;
   gap: 0.6rem;
+  font-size: 0.92rem;
+  transition: background 0.15s ease, color 0.15s ease;
 }
 
 .se-sidebar .nav-link:hover {
@@ -43,8 +53,14 @@ body {
 }
 
 .se-sidebar .nav-link.active {
-  background: var(--se-brand);
+  background: linear-gradient(135deg, #4f8cff, #2563eb);
   color: #fff;
+  box-shadow: 0 8px 18px -8px rgba(37, 99, 235, 0.7);
+}
+
+.se-sidebar .nav-link i {
+  width: 1.15rem;
+  text-align: center;
 }
 
 .se-sidebar .se-group-title {
@@ -80,6 +96,21 @@ body {
 .se-auth-card {
   width: 100%;
   max-width: 420px;
+  border-radius: 1.1rem;
+}
+
+/* Gradient brand logo chip on the auth screens. */
+.se-auth-logo {
+  width: 60px;
+  height: 60px;
+  border-radius: 1rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #4f8cff, #2563eb);
+  color: #fff;
+  font-size: 1.8rem;
+  box-shadow: 0 10px 22px -10px rgba(37, 99, 235, 0.6);
 }
 
 /* Reusable modal backdrop (we drive Bootstrap modal markup with a signal) */
@@ -268,6 +299,16 @@ body {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
   transform: translateY(-1px);
 }
+/* Keep dragging across days from selecting the day-number text. */
+.se-cal-cell {
+  user-select: none;
+}
+/* Highlight days caught in a drag-select before the group editor opens. */
+.se-cal-cell.se-cal-selected {
+  outline: 2px solid #2563eb;
+  outline-offset: -2px;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.18);
+}
 .se-cal-empty {
   background: transparent;
   border-color: transparent;
@@ -338,4 +379,331 @@ body {
 }
 .se-cal-dot.se-cal-owner_use {
   background: #6f42c1;
+}
+
+/* =====================================================================
+   App-wide visual polish. These enhance the shared building blocks
+   (cards, tables, buttons, forms, the top bar, modals) so every page —
+   every role — inherits the same clean look without per-page CSS.
+   ===================================================================== */
+
+/* Cards: softer corners + subtle border and shadow. (Utility `.border-0`
+   still wins, so heroes / auth cards / modals stay borderless.) */
+.card {
+  border-radius: var(--se-radius);
+  border: 1px solid var(--se-border);
+  box-shadow: var(--se-shadow-sm);
+}
+.card-header {
+  background-color: #fff;
+  border-bottom: 1px solid var(--se-border);
+  font-weight: 600;
+}
+.card-footer {
+  background-color: #fff;
+  border-top: 1px solid var(--se-border);
+}
+
+/* Sticky top bar: frosted + faint shadow. */
+.navbar.sticky-top {
+  background-color: rgba(255, 255, 255, 0.9) !important;
+  backdrop-filter: saturate(180%) blur(6px);
+  box-shadow: 0 1px 0 rgba(15, 23, 42, 0.06), 0 8px 20px -16px rgba(15, 23, 42, 0.4);
+}
+
+/* Tables: quiet uppercase headers, roomier cells, soft hover tint. */
+.table > :not(caption) > * > * {
+  padding: 0.7rem 0.9rem;
+}
+.table thead th {
+  text-transform: uppercase;
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  color: #64748b;
+  font-weight: 700;
+  background-color: #f8fafc;
+  border-bottom: 1px solid var(--se-border);
+}
+.table-hover > tbody > tr:hover > * {
+  background-color: #f4f8ff;
+}
+
+/* Buttons: gently rounded; primary gets the brand gradient. */
+.btn {
+  border-radius: 0.55rem;
+  font-weight: 500;
+}
+.btn-primary {
+  background-image: linear-gradient(135deg, #4f8cff, #2563eb);
+  border: none;
+}
+.btn-primary:hover,
+.btn-primary:focus,
+.btn-primary:active {
+  background-image: linear-gradient(135deg, #4483f5, #1d4ed8);
+}
+
+/* Form controls: rounded with a brand focus ring. */
+.form-control,
+.form-select {
+  border-radius: 0.55rem;
+}
+.form-control:focus,
+.form-select:focus {
+  border-color: #93b4ff;
+  box-shadow: 0 0 0 0.2rem rgba(37, 99, 235, 0.15);
+}
+
+/* Modal chrome. */
+.modal-content {
+  border-radius: 1rem;
+}
+
+/* Badges a touch bolder. */
+.badge {
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+/* Section heading used above card grids. */
+.se-section-title {
+  font-weight: 700;
+}
+
+/* Standard page header (icon chip + title + subtitle), shared by the owner
+   page-header component and the generic CRUD screen so every inner page opens
+   the same way. */
+.se-page-head-icon {
+  width: 46px;
+  height: 46px;
+  border-radius: 0.8rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 1.35rem;
+  background: linear-gradient(135deg, #4f8cff, #2563eb);
+  box-shadow: 0 8px 18px -8px rgba(37, 99, 235, 0.5);
+  flex-shrink: 0;
+}
+.se-page-head-title {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: #0f172a;
+  line-height: 1.2;
+}
+.se-page-head-sub {
+  font-size: 0.85rem;
+  color: #64748b;
+}
+
+/* ---------------------------------------------------------------------
+   Reusable dashboard building blocks (hero banner, KPI card, tool tile).
+   Shared by every role's landing dashboard so they read as one product.
+   --------------------------------------------------------------------- */
+
+/* Hero banner */
+.se-hero {
+  position: relative;
+  overflow: hidden;
+  border-radius: 1.25rem;
+  background: linear-gradient(120deg, #4338ca 0%, #6d28d9 45%, #2563eb 100%);
+  color: #fff;
+  padding: 1.9rem 2.1rem;
+  box-shadow: 0 20px 45px -20px rgba(76, 29, 149, 0.7);
+}
+.se-hero-inner {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1.25rem;
+}
+.se-hero-glow {
+  position: absolute;
+  top: -45%;
+  right: -8%;
+  width: 440px;
+  height: 440px;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.28), transparent 62%);
+  z-index: 1;
+  pointer-events: none;
+}
+.se-hero-watermark {
+  position: absolute;
+  right: 1.5rem;
+  bottom: -2rem;
+  font-size: 9.5rem;
+  color: rgba(255, 255, 255, 0.09);
+  z-index: 1;
+  pointer-events: none;
+}
+.se-hero-avatar {
+  width: 62px;
+  height: 62px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.18);
+  border: 2px solid rgba(255, 255, 255, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.65rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.se-hero-eyebrow {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  opacity: 0.85;
+}
+.se-hero-title {
+  font-size: 1.65rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+.se-hero-sub {
+  opacity: 0.85;
+  max-width: 52ch;
+  font-size: 0.95rem;
+}
+.se-hero-side {
+  text-align: right;
+}
+.se-hero-pill {
+  display: inline-flex;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  padding: 0.15rem 0.65rem;
+  border-radius: 2rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+.se-hero-email {
+  font-size: 0.8rem;
+  opacity: 0.8;
+  margin-top: 0.35rem;
+}
+
+/* KPI card */
+.se-kpi {
+  background: #fff;
+  border-radius: 1rem;
+  padding: 1.1rem 1.25rem;
+  border: 1px solid var(--se-border);
+  box-shadow: var(--se-shadow-sm);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.se-kpi:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--se-shadow-md);
+}
+.se-kpi-top {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 0.7rem;
+}
+.se-kpi-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 0.7rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 1.15rem;
+  background: linear-gradient(135deg, #4f8cff, #2563eb);
+  box-shadow: 0 6px 14px -6px rgba(37, 99, 235, 0.55);
+}
+.se-kpi-label {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 700;
+  color: #64748b;
+}
+.se-kpi-value {
+  font-size: 2rem;
+  font-weight: 800;
+  line-height: 1;
+  color: #0f172a;
+}
+.se-kpi-caption {
+  font-size: 0.78rem;
+  color: #94a3b8;
+  margin-top: 0.3rem;
+}
+
+/* Tool / quick-access tile */
+.se-tile {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  background: #fff;
+  border-radius: 1rem;
+  padding: 1.1rem 1.2rem;
+  border: 1px solid var(--se-border);
+  text-decoration: none;
+  box-shadow: 0 6px 18px -14px rgba(15, 23, 42, 0.3);
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+}
+.se-tile:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--se-shadow-md);
+  border-color: #dbe3f4;
+}
+.se-tile-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 0.9rem;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 1.5rem;
+  background: linear-gradient(135deg, #4f8cff, #2563eb);
+  box-shadow: 0 8px 18px -8px rgba(37, 99, 235, 0.5);
+}
+.se-tile-body {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+.se-tile-title {
+  font-weight: 700;
+  color: #0f172a;
+  margin-bottom: 0.15rem;
+}
+.se-tile-desc {
+  font-size: 0.82rem;
+  color: #64748b;
+  line-height: 1.35;
+}
+.se-tile-arrow {
+  color: #cbd5e1;
+  font-size: 1.1rem;
+  flex-shrink: 0;
+  transition: transform 0.15s ease, color 0.15s ease;
+}
+.se-tile:hover .se-tile-arrow {
+  transform: translateX(4px);
+  color: #2563eb;
+}
+
+@media (max-width: 575.98px) {
+  .se-hero {
+    padding: 1.35rem;
+  }
+  .se-hero-side {
+    text-align: left;
+  }
+  .se-hero-title {
+    font-size: 1.35rem;
+  }
 }

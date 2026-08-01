@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.NoArgsConstructor;
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import com.stayease.maintenance.enums.ReportedByType;
 import com.stayease.maintenance.enums.MaintenanceCategory;
@@ -47,6 +48,10 @@ public class MaintenanceIssue {
     private LocalDateTime reportedDate;
 
     private LocalDateTime resolvedDate;
+
+    /** Repair cost logged when the issue is resolved; feeds the owner statement. */
+    @Column(precision = 12, scale = 2)
+    private BigDecimal amountSpent;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)

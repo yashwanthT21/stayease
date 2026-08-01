@@ -1,7 +1,8 @@
-import { ChangeDetectionStrategy, Component, OnInit, computed, inject, input, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, HostListener, OnInit, computed, inject, input, signal } from '@angular/core';
 import { CurrencyPipe } from '@angular/common';
 import { ActivatedRoute } from '@angular/router';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { forkJoin } from 'rxjs';
 import { CrudService } from '../../core/services/crud.service';
 import { ToastService } from '../../core/services/toast.service';
 import { OwnerDataService } from '../../core/services/owner-data.service';
@@ -60,7 +61,22 @@ export class AvailabilityCalendarComponent implements OnInit {
   protected readonly editorOpen = signal(false);
   protected readonly editingDate = signal<string>('');
   protected readonly editingEntryId = signal<number | null>(null);
+  // Status is a native <select> — signal + (change) rather than formControlName
+  // so the first choice registers reliably in this zoneless app.
+  protected readonly selectedStatus = signal<string>('AVAILABLE');
   protected form: FormGroup = this.buildForm();
+
+  // ---- drag-to-select multiple days + group editor ----
+  protected readonly selectedDates = signal<Set<string>>(new Set());
+  protected readonly bulkOpen = signal(false);
+  protected readonly bulkStatus = signal<string>('AVAILABLE');
+  protected readonly bulkPrice = signal<string>('');
+  protected readonly bulkSaving = signal(false);
+  protected readonly bulkTried = signal(false);
+  private dragging = false;
+  private dragAnchor: string | null = null;
+  private dragMoved = false;
+  private suppressClick = false;
 
   protected readonly monthLabel = computed(() => `${MONTHS[this.month()]} ${this.year()}`);
 
@@ -175,13 +191,129 @@ export class AvailabilityCalendarComponent implements OnInit {
     this.month.set(now.getMonth());
   }
 
+  // ---- drag-to-select multiple days ----
+  protected onCellMouseDown(cell: DayCell): void {
+    if (this.readOnly() || !this.selectedId()) {
+      return;
+    }
+    this.dragging = true;
+    this.dragMoved = false;
+    this.dragAnchor = cell.date;
+    this.selectedDates.set(new Set([cell.date]));
+  }
+
+  protected onCellMouseEnter(cell: DayCell): void {
+    if (!this.dragging || !this.dragAnchor) {
+      return;
+    }
+    this.dragMoved = true;
+    this.selectedDates.set(this.rangeBetween(this.dragAnchor, cell.date));
+  }
+
+  @HostListener('document:mouseup')
+  protected onDocMouseUp(): void {
+    if (!this.dragging) {
+      return;
+    }
+    this.dragging = false;
+    if (this.dragMoved && this.selectedDates().size > 1) {
+      // A real drag across several days → open the group editor. Suppress the
+      // click that follows so the single-day editor doesn't also open.
+      this.suppressClick = true;
+      this.openBulk();
+    } else {
+      this.selectedDates.set(new Set());
+    }
+  }
+
+  protected isSelected(date: string): boolean {
+    return this.selectedDates().has(date);
+  }
+
+  /** Every date from anchor to target inclusive (order-independent). */
+  private rangeBetween(a: string, b: string): Set<string> {
+    const start = a <= b ? a : b;
+    const end = a <= b ? b : a;
+    const out = new Set<string>();
+    const d = new Date(start + 'T00:00:00');
+    const last = new Date(end + 'T00:00:00');
+    while (d <= last) {
+      out.add(`${d.getFullYear()}-${this.pad(d.getMonth() + 1)}-${this.pad(d.getDate())}`);
+      d.setDate(d.getDate() + 1);
+    }
+    return out;
+  }
+
+  // ---- group (bulk) editor ----
+  protected openBulk(): void {
+    this.bulkTried.set(false);
+    this.bulkStatus.set('AVAILABLE');
+    this.bulkPrice.set('');
+    this.bulkOpen.set(true);
+  }
+
+  protected closeBulk(): void {
+    this.bulkOpen.set(false);
+    this.selectedDates.set(new Set());
+  }
+
+  protected onBulkStatus(event: Event): void {
+    this.bulkStatus.set((event.target as HTMLSelectElement).value);
+  }
+
+  protected onBulkPrice(event: Event): void {
+    this.bulkPrice.set((event.target as HTMLInputElement).value);
+  }
+
+  /** Create/update an availability entry for every selected date, in one go. */
+  protected saveBulk(): void {
+    this.bulkTried.set(true);
+    const propertyId = this.selectedId();
+    const price = Number(this.bulkPrice());
+    const dates = [...this.selectedDates()];
+    if (!propertyId || !(price > 0) || dates.length === 0) {
+      return;
+    }
+    const byDate = this.byDate();
+    const reqs = dates.map((date) => {
+      const payload = {
+        propertyId,
+        calendarDate: date,
+        availabilityStatus: this.bulkStatus() as AvailabilityStatus,
+        basePrice: price,
+        minimumNights: 1,
+      };
+      const existing = byDate.get(date);
+      return existing
+        ? this.crud.update<AvailabilityCalendarResponse>('/api/availability', existing.id, payload)
+        : this.crud.create<AvailabilityCalendarResponse>('/api/availability', payload);
+    });
+
+    this.bulkSaving.set(true);
+    forkJoin(reqs).subscribe({
+      next: () => {
+        this.bulkSaving.set(false);
+        this.bulkOpen.set(false);
+        this.selectedDates.set(new Set());
+        this.toast.success(`Availability set for ${dates.length} day(s).`);
+        this.loadEntries(propertyId);
+      },
+      error: () => this.bulkSaving.set(false),
+    });
+  }
+
   // ---- day editor ----
   protected openDay(cell: DayCell): void {
+    if (this.suppressClick) {
+      this.suppressClick = false; // consumed the click that ended a drag
+      return;
+    }
     if (this.readOnly() || !this.selectedId()) {
       return;
     }
     this.editingDate.set(cell.date);
     this.editingEntryId.set(cell.entry?.id ?? null);
+    this.selectedStatus.set(cell.entry?.availabilityStatus ?? 'AVAILABLE');
     this.form = this.buildForm(cell.entry);
     this.editorOpen.set(true);
   }
@@ -190,9 +322,13 @@ export class AvailabilityCalendarComponent implements OnInit {
     this.editorOpen.set(false);
   }
 
+  protected onStatusChange(event: Event): void {
+    this.selectedStatus.set((event.target as HTMLSelectElement).value);
+  }
+
+  // Only basePrice lives in the reactive form; status is a signal.
   private buildForm(entry?: AvailabilityCalendarResponse): FormGroup {
     return this.fb.group({
-      availabilityStatus: [entry?.availabilityStatus ?? 'AVAILABLE', [Validators.required]],
       basePrice: [entry?.basePrice ?? '', [Validators.required, Validators.min(0.01)]],
     });
   }
@@ -203,11 +339,11 @@ export class AvailabilityCalendarComponent implements OnInit {
       this.form.markAllAsTouched();
       return;
     }
-    const raw = this.form.getRawValue() as { availabilityStatus: AvailabilityStatus; basePrice: number };
+    const raw = this.form.getRawValue() as { basePrice: number };
     const payload = {
       propertyId,
       calendarDate: this.editingDate(),
-      availabilityStatus: raw.availabilityStatus,
+      availabilityStatus: this.selectedStatus() as AvailabilityStatus,
       basePrice: Number(raw.basePrice),
       // Minimum-nights was removed with the pricing engine; the backend still
       // requires the field, so we always send 1 (no minimum).

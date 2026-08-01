@@ -2,7 +2,7 @@
   <button headerActions class="btn btn-primary btn-sm" (click)="openCreate()"><i class="bi bi-plus-lg me-1"></i>New check-out</button>
 </app-owner-page-header>
 
-<div class="card shadow-sm border-0">
+<div class="card shadow-sm border-0 overflow-hidden">
   <div class="card-header bg-white border-bottom">
     <div class="input-group input-group-sm" style="max-width: 320px">
       <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
@@ -36,16 +36,16 @@
               <td>{{ fmtDateTime(c.actualCheckOut) }}</td>
               <td class="text-center">
                 @if (c.damageNoted) {
-                  <i class="bi bi-exclamation-triangle-fill text-danger" title="Damage noted"></i>
+                  <span class="badge rounded-pill bg-danger-subtle text-danger-emphasis"><i class="bi bi-exclamation-triangle-fill me-1"></i>Damage</span>
                 } @else {
-                  <i class="bi bi-dash text-muted" title="None"></i>
+                  <span class="badge rounded-pill bg-secondary-subtle text-secondary-emphasis">None</span>
                 }
               </td>
               <td class="text-center">
                 @if (c.depositReleased) {
-                  <i class="bi bi-check-circle-fill text-success" title="Released"></i>
+                  <span class="badge rounded-pill bg-success-subtle text-success-emphasis"><i class="bi bi-check-lg me-1"></i>Released</span>
                 } @else {
-                  <i class="bi bi-dash text-muted" title="Held"></i>
+                  <span class="badge rounded-pill bg-secondary-subtle text-secondary-emphasis">Held</span>
                 }
               </td>
               <td><span class="badge {{ statusBadge(c.status) }}">{{ c.status | labelize }}</span></td>
@@ -84,8 +84,8 @@
           </div>
           <div class="col-md-6">
             <label class="form-label">Status</label>
-            <select class="form-select" formControlName="status">
-              @for (s of statuses; track s) { <option [value]="s">{{ s | labelize }}</option> }
+            <select class="form-select" (change)="onStatusChange($event)">
+              @for (s of statuses; track s) { <option [value]="s" [selected]="selectedStatus() === s">{{ s | labelize }}</option> }
             </select>
             <div class="form-text">Defaults to Checked Out.</div>
           </div>

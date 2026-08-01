@@ -2,7 +2,7 @@
   <button headerActions class="btn btn-primary btn-sm" (click)="openCreate()"><i class="bi bi-plus-lg me-1"></i>New property</button>
 </app-owner-page-header>
 
-<div class="card shadow-sm border-0">
+<div class="card shadow-sm border-0 overflow-hidden">
   <div class="card-header bg-white border-bottom">
     <div class="input-group input-group-sm" style="max-width: 320px">
       <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
@@ -14,7 +14,6 @@
     <table class="table table-hover align-middle mb-0">
       <thead class="table-light">
         <tr>
-          <th>ID</th>
           <th>Title</th>
           <th>Type</th>
           <th>City</th>
@@ -27,13 +26,12 @@
       </thead>
       <tbody>
         @if (loading()) {
-          <tr><td colspan="9" class="text-center text-muted py-4"><div class="spinner-border spinner-border-sm text-primary me-2"></div>Loading…</td></tr>
+          <tr><td colspan="8" class="text-center text-muted py-4"><div class="spinner-border spinner-border-sm text-primary me-2"></div>Loading…</td></tr>
         } @else if (filtered().length === 0) {
-          <tr><td colspan="9" class="text-center text-muted py-5"><i class="bi bi-inbox fs-3 d-block mb-2"></i>No properties yet — add your first one.</td></tr>
+          <tr><td colspan="8" class="text-center text-muted py-5"><i class="bi bi-inbox fs-3 d-block mb-2"></i>No properties yet — add your first one.</td></tr>
         } @else {
           @for (p of filtered(); track p.id) {
             <tr>
-              <td class="text-muted">#{{ p.id }}</td>
               <td class="fw-semibold">{{ p.title }}</td>
               <td>{{ p.type | labelize }}</td>
               <td>{{ p.city }}</td>
@@ -55,7 +53,7 @@
 
 <!-- Create / edit modal -->
 @if (modalOpen()) {
-  <app-owner-dialog [title]="editingId() === null ? 'New property' : 'Edit property #' + editingId()" icon="bi-houses" size="lg" (dismiss)="closeModal()">
+  <app-owner-dialog [title]="editingId() === null ? 'New property' : 'Edit property'" icon="bi-houses" size="lg" (dismiss)="closeModal()">
     <form [formGroup]="form" (ngSubmit)="submit()">
       <div class="modal-body">
         <!-- Basics -->
@@ -68,8 +66,8 @@
           </div>
           <div class="col-md-4">
             <label class="form-label">Type <span class="text-danger">*</span></label>
-            <select class="form-select" formControlName="type" [class.is-invalid]="invalid('type')">
-              @for (t of types; track t) { <option [value]="t">{{ t | labelize }}</option> }
+            <select class="form-select" (change)="onTypeChange($event)">
+              @for (t of types; track t) { <option [value]="t" [selected]="selectedType() === t">{{ t | labelize }}</option> }
             </select>
           </div>
           <div class="col-md-8">
@@ -136,8 +134,8 @@
         <div class="row g-3">
           <div class="col-md-6">
             <label class="form-label">Status</label>
-            <select class="form-select" formControlName="status">
-              @for (s of statuses; track s) { <option [value]="s">{{ s | labelize }}</option> }
+            <select class="form-select" (change)="onStatusChange($event)">
+              @for (s of statuses; track s) { <option [value]="s" [selected]="selectedStatus() === s">{{ s | labelize }}</option> }
             </select>
             <div class="form-text">Set to <strong>Listed</strong> to make it bookable by guests.</div>
           </div>
@@ -159,7 +157,7 @@
 @if (deleteTarget(); as target) {
   <app-owner-dialog title="Delete property" icon="bi-exclamation-triangle" size="md" (dismiss)="cancelDelete()">
     <div class="modal-body">
-      Delete <strong>{{ target.title }}</strong> (#{{ target.id }})? This also removes its availability and pricing. This cannot be undone.
+      Delete <strong>{{ target.title }}</strong>? This also removes its availability and pricing. This cannot be undone.
     </div>
     <div class="modal-footer">
       <button type="button" class="btn btn-outline-secondary" (click)="cancelDelete()">Cancel</button>

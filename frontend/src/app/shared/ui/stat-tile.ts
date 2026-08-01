@@ -8,21 +8,17 @@ import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
   selector: 'app-stat-tile',
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <div class="card se-stat-card shadow-sm h-100">
-      <div class="card-body">
-        <div class="d-flex align-items-center gap-2 mb-2">
-          @if (icon) {
-            <span class="se-owner-kpi-icon" [class]="'bg-' + tone + ' bg-opacity-10 text-' + tone">
-              <i class="bi {{ icon }}"></i>
-            </span>
-          }
-          <div class="text-muted small text-uppercase fw-semibold">{{ label }}</div>
-        </div>
-        <div class="h3 fw-bold mb-0" [class]="'text-' + tone">{{ value }}</div>
-        @if (hint) {
-          <div class="text-muted small mt-1">{{ hint }}</div>
+    <div class="se-kpi h-100">
+      <div class="se-kpi-top">
+        @if (icon) {
+          <span class="se-kpi-icon" [style.background]="gradient()"><i class="bi {{ icon }}"></i></span>
         }
+        <span class="se-kpi-label">{{ label }}</span>
       </div>
+      <div class="se-kpi-value">{{ value }}</div>
+      @if (hint) {
+        <div class="se-kpi-caption">{{ hint }}</div>
+      }
     </div>
   `,
 })
@@ -30,7 +26,21 @@ export class StatTileComponent {
   @Input() label = '';
   @Input() value: string | number | null = '';
   @Input() icon = '';
-  /** Bootstrap theme colour name (primary, success, warning, danger, secondary…). */
+  /** Theme colour name (primary, success, warning, danger, secondary, info). */
   @Input() tone = 'primary';
   @Input() hint = '';
+
+  private readonly toneStops: Record<string, [string, string]> = {
+    primary: ['#4f8cff', '#2563eb'],
+    success: ['#34d399', '#059669'],
+    secondary: ['#94a3b8', '#64748b'],
+    warning: ['#fbbf24', '#d97706'],
+    danger: ['#fb7185', '#e11d48'],
+    info: ['#22d3ee', '#0891b2'],
+  };
+
+  protected gradient(): string {
+    const [a, b] = this.toneStops[this.tone] ?? this.toneStops['primary'];
+    return `linear-gradient(135deg, ${a}, ${b})`;
+  }
 }

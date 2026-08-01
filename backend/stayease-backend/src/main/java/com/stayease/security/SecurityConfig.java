@@ -67,7 +67,13 @@ public class SecurityConfig {
                         .requestMatchers("/api/users/**").hasRole("ADMIN")
                         // audit trail: admins & finance
                         .requestMatchers("/api/audit-logs/**").hasAnyRole("ADMIN", "FINANCE")
-                        // financial postings: admins & finance
+                        // financial postings: admins & finance create/update/delete them;
+                        // an owner may READ their own statements & payouts (the owner UI
+                        // scopes each request to the signed-in owner's id) so they show up
+                        // on the owner dashboard's payout-statement tab.
+                        .requestMatchers(org.springframework.http.HttpMethod.GET,
+                                "/api/owner-statements/**", "/api/owner-payouts/**")
+                        .hasAnyRole("ADMIN", "FINANCE", "OWNER")
                         .requestMatchers("/api/owner-statements/**", "/api/owner-payouts/**")
                         .hasAnyRole("ADMIN", "FINANCE")
                         // everything else: any authenticated user

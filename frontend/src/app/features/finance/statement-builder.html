@@ -1,0 +1,251 @@
+<div class="d-flex align-items-center justify-content-between flex-wrap gap-3 mb-4">
+  <div class="d-flex align-items-center gap-3">
+    <span class="se-page-head-icon"><i class="bi bi-file-earmark-text"></i></span>
+    <div>
+      <h1 class="se-page-head-title mb-0">Owner Statements</h1>
+      <p class="se-page-head-sub mb-0">Generate monthly statements from booking, cleaning and maintenance records.</p>
+    </div>
+  </div>
+  <button class="btn btn-primary btn-sm" (click)="openCreate()" [disabled]="loading()">
+    <i class="bi bi-plus-lg me-1"></i>New Statement
+  </button>
+</div>
+
+<div class="card shadow-sm border-0 overflow-hidden">
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>ID</th>
+          <th>Owner</th>
+          <th>Period</th>
+          <th class="text-end">Gross revenue</th>
+          <th class="text-end">Platform fee</th>
+          <th class="text-end">Mgmt fee</th>
+          <th class="text-end">Cleaning fee</th>
+          <th class="text-end">Maintenance</th>
+          <th class="text-end">Net payout</th>
+          <th>Status</th>
+          <th class="text-end">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        @if (loading()) {
+          <tr><td colspan="11" class="text-center text-muted py-4"><div class="spinner-border spinner-border-sm text-primary me-2"></div>Loading…</td></tr>
+        } @else if (statements().length === 0) {
+          <tr><td colspan="11" class="text-center text-muted py-5"><i class="bi bi-file-earmark-text fs-3 d-block mb-2"></i>No statements yet.</td></tr>
+        } @else {
+          @for (s of statements(); track s.id) {
+            <tr>
+              <td class="text-muted">#{{ s.id }}</td>
+              <td>#{{ s.ownerId }}</td>
+              <td class="fw-semibold">{{ s.period }}</td>
+              <td class="text-end">{{ money(s.grossRevenue) }}</td>
+              <td class="text-end text-muted">{{ money(s.platformFee) }}</td>
+              <td class="text-end text-muted">{{ money(s.managementFee) }}</td>
+              <td class="text-end text-muted">{{ money(s.cleaningRevenue) }}</td>
+              <td class="text-end text-muted">{{ money(s.maintenanceCost) }}</td>
+              <td class="text-end fw-semibold text-success">{{ money(s.netPayout) }}</td>
+              <td><span class="badge {{ badge(s.status) }}">{{ s.status | labelize }}</span></td>
+              <td class="text-end">
+                <button class="btn btn-sm btn-outline-secondary me-1" (click)="openEdit(s)" title="Edit statement">
+                  <i class="bi bi-pencil"></i>
+                </button>
+                <button class="btn btn-sm btn-outline-danger" (click)="askDelete(s)" title="Delete statement">
+                  <i class="bi bi-trash"></i>
+                </button>
+              </td>
+            </tr>
+          }
+        }
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- New Statement builder -->
+@if (modalOpen()) {
+  <app-owner-dialog title="New Statement" icon="bi-file-earmark-text" size="lg" (dismiss)="closeModal()">
+    <div class="modal-body">
+      <div class="row g-3">
+        <div class="col-md-6">
+          <label class="form-label">Owner (user id) <span class="text-danger">*</span></label>
+          <input type="number" min="1" class="form-control" [value]="ownerId() ?? ''" (input)="onOwnerId($event)"
+                 [class.is-invalid]="triedSubmit() && !ownerId()" placeholder="e.g. 42" />
+          <div class="invalid-feedback">Enter the owner's user id.</div>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Period (month) <span class="text-danger">*</span></label>
+          <input type="month" class="form-control" [value]="period()" (input)="onPeriod($event)"
+                 [class.is-invalid]="triedSubmit() && !periodValid()" />
+          <div class="invalid-feedback">Choose the statement month.</div>
+        </div>
+      </div>
+
+      <div class="row g-3 mt-0">
+        <div class="col-md-4">
+          <label class="form-label">Base cleaning cost / checkout</label>
+          <div class="input-group">
+            <span class="input-group-text">$</span>
+            <input type="number" min="0" step="0.01" class="form-control" [value]="baseCleaningCost()" (input)="onBaseCleaning($event)" />
+          </div>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Platform fee</label>
+          <div class="input-group">
+            <input type="number" min="0" step="0.1" class="form-control" [value]="platformFeePct()" (input)="onPlatformPct($event)" />
+            <span class="input-group-text">% of gross</span>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Management fee (flat)</label>
+          <div class="input-group">
+            <span class="input-group-text">$</span>
+            <input type="number" min="0" step="0.01" class="form-control" [value]="managementFee()" (input)="onManagementFee($event)" />
+          </div>
+        </div>
+      </div>
+
+      <div class="d-flex align-items-center gap-2 mt-3">
+        <button type="button" class="btn btn-outline-primary" [disabled]="calculating() || !formValid()" (click)="calculate()">
+          @if (calculating()) { <span class="spinner-border spinner-border-sm me-1"></span> }
+          <i class="bi bi-calculator me-1"></i>Calculate from records
+        </button>
+        <span class="text-muted small">Totals the owner's checked-out stays and resolved maintenance for the period.</span>
+      </div>
+
+      <!-- Derived breakdown -->
+      @if (calculated()) {
+        <div class="card border-0 bg-light mt-3">
+          <div class="card-body py-3">
+            <div class="fw-semibold mb-2"><i class="bi bi-receipt me-1"></i>Computed breakdown</div>
+            <div class="d-flex justify-content-between py-1">
+              <span>Gross revenue <span class="text-muted small">(Σ base amount, {{ revenueCount() }} booking(s))</span></span>
+              <span class="fw-semibold">{{ money(grossRevenue()) }}</span>
+            </div>
+            <div class="d-flex justify-content-between py-1">
+              <span>Cleaning fee <span class="text-muted small">({{ cleaningCount() }} checkout(s) × {{ money(baseCleaningCost()) }})</span></span>
+              <span class="text-success">+ {{ money(cleaningFee()) }}</span>
+            </div>
+            <div class="d-flex justify-content-between py-1">
+              <span>Platform fee <span class="text-muted small">({{ platformFeePct() }}% of gross)</span></span>
+              <span class="text-danger">− {{ money(platformFee()) }}</span>
+            </div>
+            <div class="d-flex justify-content-between py-1">
+              <span>Management fee</span>
+              <span class="text-danger">− {{ money(managementFee()) }}</span>
+            </div>
+            <div class="d-flex justify-content-between py-1">
+              <span>Maintenance cost <span class="text-muted small">(Σ resolved issue amounts)</span></span>
+              <span class="text-danger">− {{ money(maintenanceCost()) }}</span>
+            </div>
+            <hr class="my-2" />
+            <div class="d-flex justify-content-between">
+              <span class="fw-semibold">Net payout</span>
+              <span class="fw-bold text-success fs-5">{{ money(netPayout()) }}</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="mt-3">
+          <label class="form-label">Status</label>
+          <select class="form-select" (change)="onStatus($event)">
+            @for (s of statuses; track s) {
+              <option [value]="s" [selected]="status() === s">{{ s | labelize }}</option>
+            }
+          </select>
+        </div>
+      } @else {
+        <div class="alert alert-secondary mt-3 mb-0 small">
+          <i class="bi bi-info-circle me-1"></i>Enter the owner and period, then <strong>Calculate</strong> to derive the amounts before saving.
+        </div>
+      }
+    </div>
+
+    <div class="modal-footer">
+      <button type="button" class="btn btn-outline-secondary" (click)="closeModal()">Cancel</button>
+      <button type="button" class="btn btn-primary" [disabled]="saving() || !calculated()" (click)="submit()">
+        @if (saving()) { <span class="spinner-border spinner-border-sm me-1"></span> }
+        Create statement
+      </button>
+    </div>
+  </app-owner-dialog>
+}
+
+<!-- Edit statement -->
+@if (editTarget(); as e) {
+  <app-owner-dialog title="Edit Statement" icon="bi-pencil" size="lg" (dismiss)="closeEdit()">
+    <div class="modal-body">
+      <p class="text-muted small">Statement <strong>#{{ e.id }}</strong> · owner #{{ e.ownerId }} · {{ e.period }}. Net payout is recalculated from the amounts below.</p>
+      <div class="row g-3">
+        <div class="col-md-4">
+          <label class="form-label">Gross revenue</label>
+          <div class="input-group">
+            <span class="input-group-text">$</span>
+            <input type="number" min="0" step="0.01" class="form-control" [value]="editGross()" (input)="onEditGross($event)" />
+          </div>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Cleaning fee</label>
+          <div class="input-group">
+            <span class="input-group-text">$</span>
+            <input type="number" min="0" step="0.01" class="form-control" [value]="editCleaning()" (input)="onEditCleaning($event)" />
+          </div>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Platform fee</label>
+          <div class="input-group">
+            <span class="input-group-text">$</span>
+            <input type="number" min="0" step="0.01" class="form-control" [value]="editPlatform()" (input)="onEditPlatform($event)" />
+          </div>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Management fee</label>
+          <div class="input-group">
+            <span class="input-group-text">$</span>
+            <input type="number" min="0" step="0.01" class="form-control" [value]="editManagement()" (input)="onEditManagement($event)" />
+          </div>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Maintenance cost</label>
+          <div class="input-group">
+            <span class="input-group-text">$</span>
+            <input type="number" min="0" step="0.01" class="form-control" [value]="editMaintenance()" (input)="onEditMaintenance($event)" />
+          </div>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Status</label>
+          <select class="form-select" (change)="onEditStatus($event)">
+            @for (s of statuses; track s) {
+              <option [value]="s" [selected]="editStatus() === s">{{ s | labelize }}</option>
+            }
+          </select>
+        </div>
+      </div>
+      <div class="d-flex justify-content-between align-items-center mt-3 pt-2 border-top">
+        <span class="fw-semibold">Net payout</span>
+        <span class="fw-bold text-success fs-5">{{ money(editNet()) }}</span>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-outline-secondary" (click)="closeEdit()">Cancel</button>
+      <button type="button" class="btn btn-primary" [disabled]="savingEdit()" (click)="saveEdit()">
+        @if (savingEdit()) { <span class="spinner-border spinner-border-sm me-1"></span> }
+        Save changes
+      </button>
+    </div>
+  </app-owner-dialog>
+}
+
+<!-- Delete confirm -->
+@if (deleteTarget(); as d) {
+  <app-owner-dialog title="Delete statement" icon="bi-trash" size="md" (dismiss)="cancelDelete()">
+    <div class="modal-body">
+      <p class="mb-0">Delete statement <strong>#{{ d.id }}</strong> for owner #{{ d.ownerId }} ({{ d.period }})? This cannot be undone.</p>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-outline-secondary" (click)="cancelDelete()">Cancel</button>
+      <button type="button" class="btn btn-danger" (click)="confirmDelete()">Delete</button>
+    </div>
+  </app-owner-dialog>
+}

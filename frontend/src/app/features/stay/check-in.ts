@@ -57,6 +57,12 @@ export class CheckInComponent {
   protected readonly selectedGuestId = signal<number | null>(null);
   protected readonly attempted = signal(false);
 
+  // Access method & status are native <select>s too. Same zoneless reason as the
+  // reference pickers above: driven by signals + (change), not formControlName,
+  // so the first choice registers reliably instead of keeping the default.
+  protected readonly selectedAccessMethod = signal<string>('');
+  protected readonly selectedStatus = signal<string>('PENDING');
+
   protected form: FormGroup = this.buildForm();
 
   protected readonly filtered = computed(() => {
@@ -97,13 +103,11 @@ export class CheckInComponent {
     });
   }
 
-  // Only the plain (non-reference) fields live in the reactive form.
+  // Only the plain fields live in the reactive form; the selects are signals.
   private buildForm(row?: CheckInRecordResponse): FormGroup {
     return this.fb.group({
       actualCheckIn: [row?.actualCheckIn ? String(row.actualCheckIn).slice(0, 16) : ''],
-      accessMethod: [row?.accessMethod ?? ''],
       welcomePackSent: [row?.welcomePackSent ?? false],
-      status: [row?.status ?? 'PENDING'],
     });
   }
 
@@ -121,11 +125,21 @@ export class CheckInComponent {
     this.selectedGuestId.set(raw ? Number(raw) : null);
   }
 
+  protected onAccessMethodChange(event: Event): void {
+    this.selectedAccessMethod.set((event.target as HTMLSelectElement).value);
+  }
+
+  protected onStatusChange(event: Event): void {
+    this.selectedStatus.set((event.target as HTMLSelectElement).value);
+  }
+
   protected openCreate(): void {
     this.editingId.set(null);
     this.attempted.set(false);
     this.selectedReservationId.set(null);
     this.selectedGuestId.set(null);
+    this.selectedAccessMethod.set('');
+    this.selectedStatus.set('PENDING');
     this.form = this.buildForm();
     this.modalOpen.set(true);
   }
@@ -135,6 +149,8 @@ export class CheckInComponent {
     this.attempted.set(false);
     this.selectedReservationId.set(row.reservationId ?? null);
     this.selectedGuestId.set(row.guestId ?? null);
+    this.selectedAccessMethod.set(row.accessMethod ?? '');
+    this.selectedStatus.set(row.status);
     this.form = this.buildForm(row);
     this.modalOpen.set(true);
   }
@@ -172,6 +188,11 @@ export class CheckInComponent {
       }
       payload[key] = value;
     }
+    // Selects (signal-backed): omit access method when "None"; status has a default.
+    if (this.selectedAccessMethod()) {
+      payload['accessMethod'] = this.selectedAccessMethod();
+    }
+    payload['status'] = this.selectedStatus();
 
     this.saving.set(true);
     const id = this.editingId();

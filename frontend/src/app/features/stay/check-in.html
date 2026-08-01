@@ -2,7 +2,7 @@
   <button headerActions class="btn btn-primary btn-sm" (click)="openCreate()"><i class="bi bi-plus-lg me-1"></i>New check-in</button>
 </app-owner-page-header>
 
-<div class="card shadow-sm border-0">
+<div class="card shadow-sm border-0 overflow-hidden">
   <div class="card-header bg-white border-bottom">
     <div class="input-group input-group-sm" style="max-width: 320px">
       <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
@@ -39,9 +39,9 @@
               <td>{{ (c.accessMethod | labelize) || '—' }}</td>
               <td class="text-center">
                 @if (c.welcomePackSent) {
-                  <i class="bi bi-check-circle-fill text-success" title="Sent"></i>
+                  <span class="badge rounded-pill bg-success-subtle text-success-emphasis"><i class="bi bi-check-lg me-1"></i>Sent</span>
                 } @else {
-                  <i class="bi bi-dash text-muted" title="Not sent"></i>
+                  <span class="badge rounded-pill bg-secondary-subtle text-secondary-emphasis">Not sent</span>
                 }
               </td>
               <td><span class="badge {{ statusBadge(c.status) }}">{{ c.status | labelize }}</span></td>
@@ -91,15 +91,15 @@
           </div>
           <div class="col-md-6">
             <label class="form-label">Access method</label>
-            <select class="form-select" formControlName="accessMethod">
-              <option value="">— None —</option>
-              @for (a of accessMethods; track a) { <option [value]="a">{{ a | labelize }}</option> }
+            <select class="form-select" (change)="onAccessMethodChange($event)">
+              <option value="" [selected]="selectedAccessMethod() === ''">— None —</option>
+              @for (a of accessMethods; track a) { <option [value]="a" [selected]="selectedAccessMethod() === a">{{ a | labelize }}</option> }
             </select>
           </div>
           <div class="col-md-6">
             <label class="form-label">Status</label>
-            <select class="form-select" formControlName="status">
-              @for (s of statuses; track s) { <option [value]="s">{{ s | labelize }}</option> }
+            <select class="form-select" (change)="onStatusChange($event)">
+              @for (s of statuses; track s) { <option [value]="s" [selected]="selectedStatus() === s">{{ s | labelize }}</option> }
             </select>
             <div class="form-text">Defaults to Pending.</div>
           </div>

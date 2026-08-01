@@ -1,8 +1,23 @@
 @if (!selected()) {
   <!-- Gallery of bookable properties -->
-  <div class="mb-4">
-    <h1 class="h4 mb-0"><i class="bi bi-houses text-primary me-2"></i>Properties</h1>
-    <p class="text-muted mb-0 small">Browse available properties and request a booking.</p>
+  <div class="se-hero mb-4">
+    <div class="se-hero-glow"></div>
+    <div class="se-hero-inner">
+      <div class="d-flex align-items-center gap-3">
+        <div class="se-hero-avatar"><i class="bi bi-houses"></i></div>
+        <div>
+          <div class="se-hero-eyebrow">Find your stay 👋</div>
+          <h1 class="se-hero-title mb-1">Browse properties</h1>
+          <p class="se-hero-sub mb-0">Explore available places and request a booking in a few clicks.</p>
+        </div>
+      </div>
+      @if (!loading()) {
+        <div class="se-hero-side">
+          <span class="se-hero-pill"><i class="bi bi-building me-1"></i>{{ properties().length }} available</span>
+        </div>
+      }
+    </div>
+    <i class="bi bi-buildings se-hero-watermark"></i>
   </div>
 
   @if (loading()) {

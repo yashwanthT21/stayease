@@ -1,8 +1,11 @@
 <!-- Page header -->
-<div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
-  <div>
-    <h1 class="h3 mb-0"><i class="bi {{ config.icon }} me-2"></i>{{ config.title }}</h1>
-    <small class="text-muted">{{ filteredRows().length }} record(s)</small>
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-2">
+  <div class="d-flex align-items-center gap-3">
+    <span class="se-page-head-icon"><i class="bi {{ config.icon }}"></i></span>
+    <div>
+      <h1 class="se-page-head-title mb-0">{{ config.title }}</h1>
+      <small class="text-muted">{{ filteredRows().length }} record(s)</small>
+    </div>
   </div>
   @if (!isReadOnly()) {
     <button class="btn btn-primary" (click)="openCreate()">
@@ -23,19 +26,19 @@
                 <label class="form-label small mb-1">{{ f.label }}</label>
                 @switch (f.type) {
                   @case ('select') {
-                    <select class="form-select form-select-sm" [formControlName]="f.key">
-                      <option value="">All</option>
+                    <select class="form-select form-select-sm" (change)="writeSelect('filter', f.key, $event)">
+                      <option value="" [selected]="!filterForm.get(f.key)?.value">All</option>
                       @for (o of f.options; track o) {
-                        <option [value]="o">{{ o | labelize }}</option>
+                        <option [value]="o" [selected]="filterForm.get(f.key)?.value === o">{{ o | labelize }}</option>
                       }
                     </select>
                   }
                   @case ('reference') {
                     @if (optionsForResource(f.ref?.resourceKey).length) {
-                      <select class="form-select form-select-sm" [formControlName]="f.key">
-                        <option value="">All</option>
+                      <select class="form-select form-select-sm" (change)="writeSelect('filter', f.key, $event)">
+                        <option value="" [selected]="!filterForm.get(f.key)?.value">All</option>
                         @for (o of optionsForResource(f.ref?.resourceKey); track o.value) {
-                          <option [value]="o.value">{{ o.label }}</option>
+                          <option [value]="o.value" [selected]="filterForm.get(f.key)?.value == o.value">{{ o.label }}</option>
                         }
                       </select>
                     } @else {
@@ -199,19 +202,19 @@
                       </div>
                     }
                     @case ('select') {
-                      <select class="form-select" [formControlName]="f.key">
-                        <option value="">— none —</option>
+                      <select class="form-select" (change)="writeSelect('form', f.key, $event)">
+                        <option value="" [selected]="!form.get(f.key)?.value">— none —</option>
                         @for (o of f.options; track o) {
-                          <option [value]="o">{{ o | labelize }}</option>
+                          <option [value]="o" [selected]="form.get(f.key)?.value === o">{{ o | labelize }}</option>
                         }
                       </select>
                     }
                     @case ('reference') {
                       @if (optionsForResource(f.ref?.resourceKey).length) {
-                        <select class="form-select" [formControlName]="f.key">
-                          <option value="">— select —</option>
+                        <select class="form-select" (change)="writeSelect('form', f.key, $event)">
+                          <option value="" [selected]="!form.get(f.key)?.value">— select —</option>
                           @for (o of optionsForResource(f.ref?.resourceKey); track o.value) {
-                            <option [value]="o.value">{{ o.label }}</option>
+                            <option [value]="o.value" [selected]="form.get(f.key)?.value == o.value">{{ o.label }}</option>
                           }
                         </select>
                       } @else {

@@ -183,6 +183,19 @@ export class ResourcePageComponent implements OnInit {
     return resourceKey ? this.refOptions()[resourceKey] ?? [] : [];
   }
 
+  /**
+   * Write a native <select>'s chosen value into its reactive control. The
+   * selects are bound this way — (change) + [selected] rather than
+   * formControlName — because a formControlName <select> can drop the first
+   * choice in this zoneless app (options are also async for references),
+   * leaving required fields looking unselected. The control still owns
+   * validation and submission; we only feed it the value reliably.
+   */
+  writeSelect(scope: 'form' | 'filter', key: string, event: Event): void {
+    const group = scope === 'filter' ? this.filterForm : this.form;
+    group?.get(key)?.setValue((event.target as HTMLSelectElement).value);
+  }
+
   // ---------------- create / edit ----------------
   openCreate(): void {
     this.editingId.set(null);
