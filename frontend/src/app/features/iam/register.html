@@ -1,10 +1,26 @@
 <div class="se-auth-wrap">
-  <div class="se-auth-card card shadow-lg border-0">
-    <div class="card-body p-4 p-sm-5">
-      <div class="text-center mb-4">
-        <div class="se-auth-logo mx-auto mb-2"><i class="bi bi-house-heart-fill"></i></div>
-        <h1 class="h4 mt-2 mb-0">Create your account</h1>
-        <p class="text-muted small">Join the StayEase console</p>
+  <div class="se-auth-shell">
+    <!-- Brand panel -->
+    <aside class="se-auth-brand">
+      <div class="se-auth-brand-glow"></div>
+      <div class="se-auth-brand-inner">
+        <div class="se-auth-brand-logo mb-3"><i class="bi bi-house-heart-fill"></i></div>
+        <h2 class="se-auth-brand-title">Join StayEase</h2>
+        <p class="se-auth-brand-sub">Create an account to manage properties, bookings and stays — all in one place.</p>
+        <ul class="se-auth-feats">
+          <li><i class="bi bi-houses"></i> List and manage your properties</li>
+          <li><i class="bi bi-people"></i> Coordinate guests and turnovers</li>
+          <li><i class="bi bi-graph-up-arrow"></i> Track revenue and reviews</li>
+        </ul>
+      </div>
+    </aside>
+
+    <!-- Form panel -->
+    <section class="se-auth-form">
+      <div class="se-auth-logo d-md-none mb-2"><i class="bi bi-house-heart-fill"></i></div>
+      <div class="mb-3">
+        <h1 class="se-auth-heading">Create your account</h1>
+        <p class="text-muted mb-0">Get started in a minute.</p>
       </div>
 
       @if (error()) {
@@ -12,23 +28,35 @@
       }
 
       <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
-        <div class="mb-3">
+        <div class="mb-2">
           <label class="form-label">Full name</label>
-          <input type="text" class="form-control" formControlName="name" />
+          <div class="input-group">
+            <span class="input-group-text"><i class="bi bi-person"></i></span>
+            <input type="text" class="form-control" formControlName="name" placeholder="Your name"
+                   [class.is-invalid]="form.get('name')?.invalid && form.get('name')?.touched" />
+          </div>
           @if (form.get('name')?.invalid && form.get('name')?.touched) {
             <div class="text-danger small mt-1">Name is required.</div>
           }
         </div>
-        <div class="mb-3">
+        <div class="mb-2">
           <label class="form-label">Email</label>
-          <input type="email" class="form-control" formControlName="email" autocomplete="username" />
+          <div class="input-group">
+            <span class="input-group-text"><i class="bi bi-envelope"></i></span>
+            <input type="email" class="form-control" formControlName="email" autocomplete="username" placeholder="you@example.com"
+                   [class.is-invalid]="form.get('email')?.invalid && form.get('email')?.touched" />
+          </div>
           @if (form.get('email')?.invalid && form.get('email')?.touched) {
             <div class="text-danger small mt-1">Enter a valid email.</div>
           }
         </div>
-        <div class="mb-3">
+        <div class="mb-2">
           <label class="form-label">Password</label>
-          <input type="password" class="form-control" formControlName="password" autocomplete="new-password" />
+          <div class="input-group">
+            <span class="input-group-text"><i class="bi bi-lock"></i></span>
+            <input type="password" class="form-control" formControlName="password" autocomplete="new-password" placeholder="At least 6 characters"
+                   [class.is-invalid]="form.get('password')?.invalid && form.get('password')?.touched" />
+          </div>
           @if (form.get('password')?.invalid && form.get('password')?.touched) {
             <div class="text-danger small mt-1">Password must be 6–72 characters.</div>
           }
@@ -36,30 +64,36 @@
         <div class="row g-3 mb-3">
           <div class="col-sm-6">
             <label class="form-label">Phone <span class="text-muted small">(optional)</span></label>
-            <input type="text" class="form-control" formControlName="phone" />
+            <div class="input-group">
+              <span class="input-group-text"><i class="bi bi-telephone"></i></span>
+              <input type="text" class="form-control" formControlName="phone" placeholder="Optional" />
+            </div>
           </div>
           <div class="col-sm-6">
             <label class="form-label">Role</label>
-            <select class="form-select" (change)="onRoleChange($event)">
-              <option value="" disabled selected>Select a role…</option>
-              @for (r of roles; track r) {
-                <option [value]="r">{{ r | labelize }}</option>
-              }
-            </select>
+            <div class="input-group">
+              <span class="input-group-text"><i class="bi bi-person-badge"></i></span>
+              <select class="form-select" (change)="onRoleChange($event)" [class.is-invalid]="triedSubmit() && !selectedRole()">
+                <option value="" disabled selected>Select a role…</option>
+                @for (r of roles; track r) {
+                  <option [value]="r">{{ r | labelize }}</option>
+                }
+              </select>
+            </div>
             @if (triedSubmit() && !selectedRole()) {
               <div class="text-danger small mt-1">Please choose a role.</div>
             }
           </div>
         </div>
-        <button type="submit" class="btn btn-primary w-100" [disabled]="loading()">
+        <button type="submit" class="btn btn-primary w-100 py-2 fw-semibold" [disabled]="loading()">
           @if (loading()) {<span class="spinner-border spinner-border-sm me-1"></span>}
           Create account
         </button>
       </form>
 
       <p class="text-center text-muted small mt-4 mb-0">
-        Already have an account? <a routerLink="/login">Sign in</a>
+        Already have an account? <a routerLink="/login" class="fw-semibold text-decoration-none">Sign in</a>
       </p>
-    </div>
+    </section>
   </div>
 </div>

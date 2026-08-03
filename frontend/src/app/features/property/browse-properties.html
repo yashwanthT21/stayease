@@ -108,7 +108,7 @@
 
     <!-- Read-only availability calendar for the picked property -->
     <div class="col-lg-8">
-      <app-owner-availability-calendar [readOnly]="true" [fixedPropertyId]="selected()!.id" />
+      <app-owner-availability-calendar [readOnly]="true" [selectable]="true" [fixedPropertyId]="selected()!.id" (dateSelected)="onCalendarDate($event)" />
     </div>
   </div>
 }

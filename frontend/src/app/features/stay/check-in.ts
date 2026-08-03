@@ -1,8 +1,11 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { DatePipe } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule } from '@angular/forms';
+import { forkJoin, of, catchError } from 'rxjs';
 import { CrudService } from '../../core/services/crud.service';
 import { ToastService } from '../../core/services/toast.service';
-import { CheckInRecordResponse, GuestProfileResponse, ReservationResponse } from '../../core/models/dtos';
+import { AuthService } from '../../core/auth/auth.service';
+import { CheckInRecordResponse, GuestProfileResponse, PropertyResponse, ReservationResponse } from '../../core/models/dtos';
 import { ACCESS_METHODS, CHECK_IN_STATUSES } from '../../core/models/enums';
 import { LabelizePipe } from '../../shared/pipes/labelize.pipe';
 import { OwnerPageHeaderComponent } from '../../shared/ui/owner-page-header';
@@ -22,15 +25,20 @@ import { OwnerDialogComponent } from '../../shared/ui/owner-dialog';
 @Component({
   selector: 'app-check-in',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ReactiveFormsModule, LabelizePipe, OwnerPageHeaderComponent, OwnerDialogComponent],
+  imports: [ReactiveFormsModule, DatePipe, LabelizePipe, OwnerPageHeaderComponent, OwnerDialogComponent],
   templateUrl: './check-in.html',
 })
 export class CheckInComponent {
   private fb = inject(FormBuilder);
   private crud = inject(CrudService);
   private toast = inject(ToastService);
+  private auth = inject(AuthService);
 
   private readonly api = '/api/check-ins';
+
+  // For a PROPERTY_MANAGER: the reservation ids at their own properties. Records
+  // and the reservation picker are limited to these (null = no scoping).
+  private readonly scopeResIds = signal<Set<number> | null>(null);
 
   protected readonly accessMethods = ACCESS_METHODS;
   protected readonly statuses = CHECK_IN_STATUSES;
@@ -44,6 +52,7 @@ export class CheckInComponent {
   // to readable labels in the table.
   protected readonly reservations = signal<ReservationResponse[]>([]);
   protected readonly guests = signal<GuestProfileResponse[]>([]);
+  protected readonly properties = signal<PropertyResponse[]>([]);
 
   protected readonly modalOpen = signal(false);
   protected readonly editingId = signal<number | null>(null);
@@ -66,8 +75,9 @@ export class CheckInComponent {
   protected form: FormGroup = this.buildForm();
 
   protected readonly filtered = computed(() => {
+    const scope = this.scopeResIds();
+    const rows = scope ? this.rows().filter((r) => scope.has(r.reservationId)) : this.rows();
     const term = this.search().trim().toLowerCase();
-    const rows = this.rows();
     if (!term) {
       return rows;
     }
@@ -82,14 +92,55 @@ export class CheckInComponent {
     this.load();
     // Populate the reference pickers. A failure (e.g. 403) just leaves them
     // empty and ids fall back to a plain "#id".
-    this.crud.list<ReservationResponse>('/api/reservations').subscribe({
-      next: (rows) => this.reservations.set(rows),
-      error: () => this.reservations.set([]),
-    });
+    const reservations$ = this.crud.list<ReservationResponse>('/api/reservations').pipe(catchError(() => of([] as ReservationResponse[])));
+    if (this.auth.role() === 'PROPERTY_MANAGER') {
+      // Manager: limit reservations (and thus records) to their own properties.
+      forkJoin({
+        props: this.crud.list<PropertyResponse>('/api/properties').pipe(catchError(() => of([] as PropertyResponse[]))),
+        res: reservations$,
+      }).subscribe(({ props, res }) => {
+        const propIds = new Set(props.map((p) => p.id));
+        const mine = res.filter((r) => propIds.has(r.propertyId));
+        this.reservations.set(mine);
+        this.properties.set(props); // titles for their own properties
+        this.scopeResIds.set(new Set(mine.map((r) => r.id)));
+      });
+    } else {
+      reservations$.subscribe((rows) => {
+        this.reservations.set(rows);
+        this.loadPropertyTitles(rows);
+      });
+    }
     this.crud.list<GuestProfileResponse>('/api/guests').subscribe({
       next: (rows) => this.guests.set(rows),
       error: () => this.guests.set([]),
     });
+  }
+
+  /**
+   * Resolve property titles by id (GET /api/properties/{id}) rather than the
+   * list endpoint: the list is scoped for a PROPERTY_MANAGER to only their own
+   * assigned properties, so a manager viewing a check-in for another property
+   * would otherwise see "#id". Fetching by id is unscoped and works for every
+   * role. Failures fall back silently (title resolves to "#id").
+   */
+  private loadPropertyTitles(reservations: ReservationResponse[]): void {
+    const ids = [...new Set(reservations.map((r) => r.propertyId).filter((id): id is number => id != null))];
+    if (!ids.length) {
+      this.properties.set([]);
+      return;
+    }
+    forkJoin(
+      ids.map((id) => this.crud.get<PropertyResponse>('/api/properties', id).pipe(catchError(() => of(null)))),
+    ).subscribe((props) => this.properties.set(props.filter((p): p is PropertyResponse => !!p)));
+  }
+
+  protected propertyTitle(id: number | undefined): string {
+    if (id == null) {
+      return '—';
+    }
+    const p = this.properties().find((x) => x.id === Number(id));
+    return p ? p.title : `#${id}`;
   }
 
   private load(): void {
@@ -248,13 +299,26 @@ export class CheckInComponent {
     });
   }
 
-  // Resolve reference ids to the same "#id · label" shape the generic engine uses.
+  // Reservation column: property + stay dates + nights (the guest has its own
+  // column here, so it isn't repeated).
   protected reservationLabel(id: number | undefined): string {
     if (id == null) {
       return '—';
     }
     const r = this.reservations().find((x) => x.id === Number(id));
-    return r ? `#${r.id} · ${r.checkInDate} · ${r.checkOutDate}` : `#${id}`;
+    if (!r) {
+      return `#${id}`;
+    }
+    return `${this.propertyTitle(r.propertyId)} · ${this.fmtDate(r.checkInDate)} → ${this.fmtDate(r.checkOutDate, true)} · ${r.nights} night${r.nights === 1 ? '' : 's'}`;
+  }
+
+  /** "2026-07-01" → "Jul 1" (or "Jul 1, 2026" with the year). */
+  private fmtDate(d: string | undefined, withYear = false): string {
+    if (!d) {
+      return '';
+    }
+    const dt = new Date(String(d).slice(0, 10) + 'T00:00:00');
+    return dt.toLocaleDateString('en-US', withYear ? { month: 'short', day: 'numeric', year: 'numeric' } : { month: 'short', day: 'numeric' });
   }
 
   protected guestLabel(id: number | undefined): string {
@@ -262,7 +326,7 @@ export class CheckInComponent {
       return '—';
     }
     const g = this.guests().find((x) => x.id === Number(id));
-    return g ? `#${g.id} · ${g.name}` : `#${id}`;
+    return g ? g.name : `#${id}`;
   }
 
   protected statusBadge(status: string): string {

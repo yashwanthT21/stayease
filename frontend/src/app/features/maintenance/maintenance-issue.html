@@ -1,0 +1,173 @@
+<app-owner-page-header icon="bi-tools" title="Maintenance Issues" subtitle="Log and track repairs across your properties.">
+  <button headerActions class="btn btn-primary btn-sm" (click)="openCreate()"><i class="bi bi-plus-lg me-1"></i>New issue</button>
+</app-owner-page-header>
+
+<div class="card shadow-sm border-0 overflow-hidden">
+  <div class="card-header bg-white border-bottom d-flex flex-wrap gap-2 align-items-center">
+    <div class="input-group input-group-sm" style="max-width: 300px">
+      <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
+      <input type="text" class="form-control" placeholder="Search property, category, status…" (input)="onSearch($event)" />
+    </div>
+    <select class="form-select form-select-sm" style="max-width: 220px" (change)="onPropertyFilter($event)">
+      <option value="">All properties</option>
+      @for (p of properties(); track p.id) {
+        <option [value]="p.id">{{ p.title }}</option>
+      }
+    </select>
+    <select class="form-select form-select-sm" style="max-width: 180px" (change)="onStatusFilter($event)">
+      <option value="">All statuses</option>
+      @for (s of statuses; track s) {
+        <option [value]="s">{{ s | labelize }}</option>
+      }
+    </select>
+  </div>
+
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>ID</th>
+          <th>Property</th>
+          <th>Category</th>
+          <th>Priority</th>
+          <th>Reported by</th>
+          <th>Reported</th>
+          <th class="text-end">Amount spent</th>
+          <th>Status</th>
+          <th class="text-end">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        @if (loading()) {
+          <tr><td colspan="9" class="text-center text-muted py-4"><div class="spinner-border spinner-border-sm text-primary me-2"></div>Loading…</td></tr>
+        } @else if (filtered().length === 0) {
+          <tr><td colspan="9" class="text-center text-muted py-5"><i class="bi bi-tools fs-3 d-block mb-2"></i>No maintenance issues yet.</td></tr>
+        } @else {
+          @for (m of filtered(); track m.id) {
+            <tr>
+              <td class="text-muted">{{ m.id }}</td>
+              <td class="fw-semibold">{{ propertyTitle(m.propertyId) }}</td>
+              <td>{{ m.category | labelize }}</td>
+              <td><span class="badge {{ priorityBadge(m.priority) }}">{{ m.priority | labelize }}</span></td>
+              <td>{{ m.reportedByType | labelize }}</td>
+              <td class="text-nowrap">{{ fmtDateTime(m.reportedDate) }}</td>
+              <td class="text-end">{{ money(m.amountSpent) }}</td>
+              <td><span class="badge {{ statusBadge(m.status) }}">{{ m.status | labelize }}</span></td>
+              <td class="text-end text-nowrap">
+                <button class="btn btn-sm btn-outline-secondary me-1" (click)="openEdit(m)" title="Edit"><i class="bi bi-pencil"></i></button>
+                <button class="btn btn-sm btn-outline-danger" (click)="askDelete(m)" title="Delete"><i class="bi bi-trash"></i></button>
+              </td>
+            </tr>
+          }
+        }
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Create / edit modal -->
+@if (modalOpen()) {
+  <app-owner-dialog [title]="editingId() === null ? 'New maintenance issue' : 'Edit maintenance issue'" icon="bi-tools" size="lg" (dismiss)="closeModal()">
+    <form [formGroup]="form" (ngSubmit)="submit()">
+      <div class="modal-body">
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label">Property <span class="text-danger">*</span></label>
+            <select class="form-select" [class.is-invalid]="propertyMissing()" (change)="onProperty($event)">
+              <option value="" [selected]="selectedPropertyId() === null">— Select a property —</option>
+              @for (p of properties(); track p.id) {
+                <option [value]="p.id" [selected]="selectedPropertyId() === p.id">{{ p.title }} · {{ p.city }}</option>
+              }
+            </select>
+            <div class="invalid-feedback">A property is required.</div>
+            @if (properties().length === 0) { <div class="form-text">No properties available.</div> }
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Reported by (user id) <span class="text-danger">*</span></label>
+            <input type="number" min="1" class="form-control" formControlName="reportedById" [class.is-invalid]="invalid('reportedById')" />
+            <div class="invalid-feedback">A reporter id is required.</div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Reporter type <span class="text-danger">*</span></label>
+            <select class="form-select" [class.is-invalid]="reporterMissing()" (change)="onReporterType($event)">
+              <option value="" [selected]="selectedReporterType() === ''">— Select —</option>
+              @for (t of reporterTypes; track t) {
+                <option [value]="t" [selected]="selectedReporterType() === t">{{ t | labelize }}</option>
+              }
+            </select>
+            <div class="invalid-feedback">Choose a reporter type.</div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Category <span class="text-danger">*</span></label>
+            <select class="form-select" [class.is-invalid]="categoryMissing()" (change)="onCategory($event)">
+              <option value="" [selected]="selectedCategory() === ''">— Select —</option>
+              @for (c of categories; track c) {
+                <option [value]="c" [selected]="selectedCategory() === c">{{ c | labelize }}</option>
+              }
+            </select>
+            <div class="invalid-feedback">Choose a category.</div>
+          </div>
+          <div class="col-12">
+            <label class="form-label">Description</label>
+            <textarea class="form-control" rows="2" formControlName="description" placeholder="Describe the issue…"></textarea>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Priority</label>
+            <select class="form-select" (change)="onPriority($event)">
+              @for (p of priorities; track p) {
+                <option [value]="p" [selected]="selectedPriority() === p">{{ p | labelize }}</option>
+              }
+            </select>
+            <div class="form-text">Defaults to Medium.</div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Contractor (user id)</label>
+            <input type="number" min="1" class="form-control" formControlName="assignedContractorId" placeholder="optional" />
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Resolved date</label>
+            <input type="datetime-local" class="form-control" formControlName="resolvedDate" />
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Amount spent</label>
+            <div class="input-group">
+              <span class="input-group-text">$</span>
+              <input type="number" min="0" step="0.01" class="form-control" formControlName="amountSpent" placeholder="0.00" />
+            </div>
+            <div class="form-text">Repair cost logged on resolution; feeds the owner statement.</div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Status</label>
+            <select class="form-select" (change)="onStatus($event)">
+              @for (s of statuses; track s) {
+                <option [value]="s" [selected]="selectedStatus() === s">{{ s | labelize }}</option>
+              }
+            </select>
+            <div class="form-text">Defaults to Open.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" (click)="closeModal()">Cancel</button>
+        <button type="submit" class="btn btn-primary" [disabled]="saving()">
+          @if (saving()) { <span class="spinner-border spinner-border-sm me-1"></span> }
+          {{ editingId() === null ? 'Create issue' : 'Save changes' }}
+        </button>
+      </div>
+    </form>
+  </app-owner-dialog>
+}
+
+<!-- Delete confirm -->
+@if (deleteTarget(); as target) {
+  <app-owner-dialog title="Delete maintenance issue" icon="bi-exclamation-triangle" size="md" (dismiss)="cancelDelete()">
+    <div class="modal-body">
+      Delete this maintenance issue for <strong>{{ propertyTitle(target.propertyId) }}</strong>? This cannot be undone.
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-outline-secondary" (click)="cancelDelete()">Cancel</button>
+      <button type="button" class="btn btn-danger" (click)="confirmDelete()">Delete</button>
+    </div>
+  </app-owner-dialog>
+}

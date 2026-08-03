@@ -55,6 +55,21 @@ export class BrowsePropertiesComponent {
     this.selected.set(null);
   }
 
+  /**
+   * Secondary date entry: tapping an available day on the calendar fills the
+   * booking form. First tap (or a tap on/before the current check-in) sets the
+   * check-in and clears check-out; a later tap sets the check-out.
+   */
+  protected onCalendarDate(date: string): void {
+    const checkIn = this.form.get('checkInDate')!.value ?? '';
+    const checkOut = this.form.get('checkOutDate')!.value ?? '';
+    if (!checkIn || checkOut || date <= checkIn) {
+      this.form.patchValue({ checkInDate: date, checkOutDate: '' });
+    } else {
+      this.form.patchValue({ checkOutDate: date });
+    }
+  }
+
   protected typeIcon(type: string): string {
     switch (type) {
       case 'VILLA':
@@ -94,9 +109,9 @@ export class BrowsePropertiesComponent {
 
     this.submitting.set(true);
     this.booking.book(input).subscribe({
-      next: (reservation) => {
+      next: () => {
         this.submitting.set(false);
-        this.toast.success(`Request sent (reservation #${reservation.id}). Awaiting manager approval.`);
+        this.toast.success('Booking request sent — awaiting manager approval.');
         this.selected.set(null);
       },
       error: (err) => {

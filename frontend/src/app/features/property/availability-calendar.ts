@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, HostListener, OnInit, computed, inject, input, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, HostListener, OnInit, computed, inject, input, output, signal } from '@angular/core';
 import { CurrencyPipe } from '@angular/common';
 import { ActivatedRoute } from '@angular/router';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -42,6 +42,9 @@ export class AvailabilityCalendarComponent implements OnInit {
   readonly readOnly = input(false);
   /** When set, show only this one property (no picker) — used embedded, e.g. on the guest booking screen. */
   readonly fixedPropertyId = input<number | null>(null);
+  /** Opt-in date picking: tapping an AVAILABLE day emits its date (guest booking). */
+  readonly selectable = input(false);
+  readonly dateSelected = output<string>();
   /** Embedded = driven by a fixed property (hides the page header + picker). */
   protected readonly embedded = computed(() => this.fixedPropertyId() != null);
 
@@ -306,6 +309,15 @@ export class AvailabilityCalendarComponent implements OnInit {
   protected openDay(cell: DayCell): void {
     if (this.suppressClick) {
       this.suppressClick = false; // consumed the click that ended a drag
+      return;
+    }
+    // Guest booking: pick an available date to fill the booking form (a
+    // secondary way to choose dates, alongside typing them in). Doesn't open
+    // the editor and only fires when the caller opts in via [selectable].
+    if (this.selectable()) {
+      if (cell.entry?.availabilityStatus === 'AVAILABLE') {
+        this.dateSelected.emit(cell.date);
+      }
       return;
     }
     if (this.readOnly() || !this.selectedId()) {

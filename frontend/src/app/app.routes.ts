@@ -16,6 +16,8 @@ import { TurnoverAssignmentComponent } from './features/housekeeping/turnover-as
 import { CheckInComponent } from './features/stay/check-in';
 import { CheckOutComponent } from './features/stay/check-out';
 import { StatementBuilderComponent } from './features/finance/statement-builder';
+import { MaintenanceIssueComponent } from './features/maintenance/maintenance-issue';
+import { PreventiveMaintenanceComponent } from './features/maintenance/preventive-maintenance';
 
 /**
  * Routes are generated from the resource registry: one CRUD route per resource,
@@ -42,6 +44,7 @@ export const routes: Routes = [
         //  - turnovers             → the housekeeping turnover-assignment screen
         //  - check-ins/check-outs  → the stay module's hand-written CRUD screens
         //  - owner-statements      → the finance statement-builder (auto-derives amounts)
+        //  - maintenance-issues / preventive-maintenance → the maintenance module's screens
         component:
           r.key === 'availability'
             ? AvailabilityCalendarComponent
@@ -53,7 +56,11 @@ export const routes: Routes = [
                   ? CheckOutComponent
                   : r.key === 'owner-statements'
                     ? StatementBuilderComponent
-                    : ResourcePageComponent,
+                    : r.key === 'maintenance-issues'
+                      ? MaintenanceIssueComponent
+                      : r.key === 'preventive-maintenance'
+                        ? PreventiveMaintenanceComponent
+                        : ResourcePageComponent,
         canActivate: [roleGuard],
         data: { config: r, roles: r.roles },
       })),

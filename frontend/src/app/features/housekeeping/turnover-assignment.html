@@ -45,9 +45,9 @@
         } @else {
           @for (t of turnovers(); track t.id) {
             <tr>
-              <td class="text-muted">#{{ t.id }}</td>
+              <td class="text-muted">{{ t.id }}</td>
               <td class="fw-semibold">{{ propertyTitle(t.propertyId) }}</td>
-              <td>{{ t.checkOutReservationId ? '#' + t.checkOutReservationId : '—' }}</td>
+              <td>{{ t.checkOutReservationId || '—' }}</td>
               <td>{{ housekeeperName(t.assignedToId) }}</td>
               <td>{{ t.assignedDate || '—' }}</td>
               <td>{{ fmtDateTime(t.startByTime) }}</td>
@@ -108,7 +108,7 @@
         <select class="form-select" (change)="onReservation($event)" [class.is-invalid]="triedSubmit() && !reservationId()">
           <option value="" disabled [selected]="reservationId() === null">Choose a checked-out reservation…</option>
           @for (r of checkedOutReservations(); track r.id) {
-            <option [value]="r.id" [selected]="reservationId() === r.id">#{{ r.id }} · {{ propertyTitle(r.propertyId) }} · out {{ r.checkOutDate }}</option>
+            <option [value]="r.id" [selected]="reservationId() === r.id">{{ propertyTitle(r.propertyId) }} · out {{ r.checkOutDate }}</option>
           }
         </select>
         <div class="invalid-feedback">Pick the checked-out reservation to clean up after.</div>
@@ -126,7 +126,7 @@
         <select class="form-select" (change)="onHousekeeper($event)" [class.is-invalid]="triedSubmit() && !housekeeperId()">
           <option value="" disabled [selected]="housekeeperId() === null">Choose a housekeeper…</option>
           @for (h of housekeepers(); track h.id) {
-            <option [value]="h.id" [selected]="housekeeperId() === h.id">{{ h.name }} (#{{ h.id }})</option>
+            <option [value]="h.id" [selected]="housekeeperId() === h.id">{{ h.name }}</option>
           }
         </select>
         @if (housekeepers().length === 0) {

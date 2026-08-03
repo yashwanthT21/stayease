@@ -219,7 +219,7 @@ export class TurnoverAssignmentComponent {
       return '—';
     }
     const h = this.housekeepers().find((x) => x.id === id);
-    return h ? `${h.name} (#${h.id})` : `#${id}`;
+    return h ? h.name : `#${id}`;
   }
 
   protected badge(status: string): string {

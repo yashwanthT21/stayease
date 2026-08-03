@@ -39,6 +39,8 @@
         <span><span class="se-cal-dot se-cal-owner_use"></span> Owner use <span class="text-muted">({{ summary()['OWNER_USE'] }})</span></span>
         @if (!readOnly()) {
           <span class="text-muted ms-auto"><i class="bi bi-hand-index me-1"></i>Click a day — or drag across several — to set price &amp; status.</span>
+        } @else if (selectable()) {
+          <span class="text-muted ms-auto"><i class="bi bi-hand-index me-1"></i>Tap green days to fill your check-in and check-out.</span>
         } @else {
           <span class="text-muted ms-auto">Green days are available to book.</span>
         }
@@ -55,7 +57,7 @@
             @for (cell of week; track $index) {
               @if (cell) {
                 <button type="button" class="se-cal-cell {{ cellClass(cell) }}"
-                        [class.se-cal-static]="readOnly()" [class.se-cal-selected]="isSelected(cell.date)"
+                        [class.se-cal-static]="readOnly() && !selectable()" [class.se-cal-selected]="isSelected(cell.date)"
                         (click)="openDay(cell)" (mousedown)="onCellMouseDown(cell)" (mouseenter)="onCellMouseEnter(cell)">
                   <span class="se-cal-day">{{ cell.day }}</span>
                   @if (cell.entry) {

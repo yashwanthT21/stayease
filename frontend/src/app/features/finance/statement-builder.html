@@ -37,8 +37,8 @@
         } @else {
           @for (s of statements(); track s.id) {
             <tr>
-              <td class="text-muted">#{{ s.id }}</td>
-              <td>#{{ s.ownerId }}</td>
+              <td class="text-muted">{{ s.id }}</td>
+              <td>{{ s.ownerId }}</td>
               <td class="fw-semibold">{{ s.period }}</td>
               <td class="text-end">{{ money(s.grossRevenue) }}</td>
               <td class="text-end text-muted">{{ money(s.platformFee) }}</td>
@@ -176,7 +176,7 @@
 @if (editTarget(); as e) {
   <app-owner-dialog title="Edit Statement" icon="bi-pencil" size="lg" (dismiss)="closeEdit()">
     <div class="modal-body">
-      <p class="text-muted small">Statement <strong>#{{ e.id }}</strong> · owner #{{ e.ownerId }} · {{ e.period }}. Net payout is recalculated from the amounts below.</p>
+      <p class="text-muted small">Statement for owner {{ e.ownerId }} · {{ e.period }}. Net payout is recalculated from the amounts below.</p>
       <div class="row g-3">
         <div class="col-md-4">
           <label class="form-label">Gross revenue</label>
@@ -241,7 +241,7 @@
 @if (deleteTarget(); as d) {
   <app-owner-dialog title="Delete statement" icon="bi-trash" size="md" (dismiss)="cancelDelete()">
     <div class="modal-body">
-      <p class="mb-0">Delete statement <strong>#{{ d.id }}</strong> for owner #{{ d.ownerId }} ({{ d.period }})? This cannot be undone.</p>
+      <p class="mb-0">Delete the statement for owner {{ d.ownerId }} ({{ d.period }})? This cannot be undone.</p>
     </div>
     <div class="modal-footer">
       <button type="button" class="btn btn-outline-secondary" (click)="cancelDelete()">Cancel</button>

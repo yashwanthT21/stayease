@@ -19,25 +19,35 @@
           <th class="text-center">Guests</th>
           <th class="text-end">Total</th>
           <th>Status</th>
+          <th>Stay</th>
           <th class="text-end">Review</th>
         </tr>
       </thead>
       <tbody>
         @if (loading()) {
-          <tr><td colspan="9" class="text-center text-muted py-4"><div class="spinner-border spinner-border-sm text-primary me-2"></div>Loading…</td></tr>
+          <tr><td colspan="10" class="text-center text-muted py-4"><div class="spinner-border spinner-border-sm text-primary me-2"></div>Loading…</td></tr>
         } @else if (rows().length === 0) {
-          <tr><td colspan="9" class="text-center text-muted py-5"><i class="bi bi-inbox fs-3 d-block mb-2"></i>You haven't booked anything yet.</td></tr>
+          <tr><td colspan="10" class="text-center text-muted py-5"><i class="bi bi-inbox fs-3 d-block mb-2"></i>You haven't booked anything yet.</td></tr>
         } @else {
           @for (r of rows(); track r.id) {
             <tr>
-              <td class="text-muted">#{{ r.id }}</td>
-              <td class="fw-semibold">Property #{{ r.propertyId }}</td>
-              <td>{{ r.checkInDate }}</td>
-              <td>{{ r.checkOutDate }}</td>
+              <td class="text-muted">{{ r.id }}</td>
+              <td class="fw-semibold">{{ propertyName(r.propertyId) }}</td>
+              <td class="text-nowrap">{{ r.checkInDate | date: 'MMM d, y' }}</td>
+              <td class="text-nowrap">{{ r.checkOutDate | date: 'MMM d, y' }}</td>
               <td class="text-center">{{ r.nights }}</td>
               <td class="text-center">{{ r.guestCount }}</td>
               <td class="text-end">{{ r.totalAmount | currency }}</td>
               <td><span class="badge {{ badge(r.status) }}">{{ statusLabel(r.status) | labelize }}</span></td>
+              <td style="min-width: 170px">
+                <span class="badge {{ stayBadge(r) }}">{{ stayLabel(r) }}</span>
+                @if (actualCheckIn(r)) {
+                  <div class="text-muted small mt-1"><i class="bi bi-box-arrow-in-right me-1"></i>In: {{ actualCheckIn(r) | date: 'MMM d, HH:mm' }}</div>
+                }
+                @if (actualCheckOut(r)) {
+                  <div class="text-muted small"><i class="bi bi-box-arrow-right me-1"></i>Out: {{ actualCheckOut(r) | date: 'MMM d, HH:mm' }}</div>
+                }
+              </td>
               <td class="text-end text-nowrap">
                 @if (canReview(r)) {
                   <button class="btn btn-sm btn-outline-primary" (click)="openReview(r)"><i class="bi bi-star me-1"></i>Leave a review</button>
@@ -59,7 +69,7 @@
 @if (reviewing(); as r) {
   <app-owner-dialog title="Review your stay" icon="bi-star" size="md" (dismiss)="closeReview()">
     <div class="modal-body">
-      <p class="text-muted small mb-3">Reservation #{{ r.id }} · {{ r.checkInDate }} → {{ r.checkOutDate }}</p>
+      <p class="text-muted small mb-3">{{ propertyName(r.propertyId) }} · {{ r.checkInDate }} → {{ r.checkOutDate }}</p>
 
       @for (c of categories; track c.key) {
         <div class="d-flex justify-content-between align-items-center mb-2">

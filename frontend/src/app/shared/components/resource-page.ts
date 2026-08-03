@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { LowerCasePipe } from '@angular/common';
+import { forkJoin, of, map, switchMap, catchError, Observable } from 'rxjs';
 import { FormBuilder, FormGroup, ReactiveFormsModule, ValidatorFn, Validators } from '@angular/forms';
 import { CrudService } from '../../core/services/crud.service';
 import { ToastService } from '../../core/services/toast.service';
@@ -42,6 +43,10 @@ export class ResourcePageComponent implements OnInit {
   readonly loading = signal(false);
   readonly saving = signal(false);
   readonly refOptions = signal<Record<string, RefOption[]>>({});
+  /** For managerScope resources: the allowed id set + which row field to test
+   *  it against ('propertyId' or 'id'). null = no client-side scoping. */
+  private readonly scopeIds = signal<Set<number> | null>(null);
+  private readonly scopeField = signal<string>('propertyId');
 
   filterForm!: FormGroup;
   readonly search = signal('');
@@ -94,9 +99,53 @@ export class ResourcePageComponent implements OnInit {
     this.filterForm = this.fb.group(filterControls);
 
     this.loadReferenceOptions();
-    if (!this.gated()) {
+
+    // managerScope resources aren't scoped by the backend, so a manager would
+    // see every property's rows / every guest. Resolve the allowed id set first,
+    // then load and filter the list client-side.
+    if (this.config.managerScope && this.auth.role() === 'PROPERTY_MANAGER') {
+      this.managerScopeData(this.config.managerScope).subscribe((res) => {
+        this.scopeField.set(res.field);
+        this.scopeIds.set(res.ids);
+        if (!this.gated()) this.load();
+      });
+    } else if (!this.gated()) {
       this.load();
     }
+  }
+
+  /**
+   * Compute the ids a PROPERTY_MANAGER is allowed to see, plus which row field
+   * to match them against:
+   *   'property'         → the manager's own property ids, matched on propertyId.
+   *   'reservationGuest' → guest ids drawn from reservations at those properties,
+   *                        matched on the guest row's id.
+   */
+  private managerScopeData(
+    mode: 'property' | 'reservation' | 'reservationGuest',
+  ): Observable<{ field: string; ids: Set<number> }> {
+    return this.crud.list<Row>('/api/properties').pipe(
+      switchMap((props) => {
+        const propIds = new Set(props.map((p) => Number(p.id)));
+        if (mode === 'property') {
+          return of({ field: 'propertyId', ids: propIds });
+        }
+        // 'reservation' and 'reservationGuest' both start from the manager's
+        // reservations (those at their properties).
+        return this.crud.list<Row>('/api/reservations').pipe(
+          map((res) => {
+            const mine = res.filter((r) => propIds.has(Number(r['propertyId'])));
+            return mode === 'reservation'
+              ? { field: 'reservationId', ids: new Set(mine.map((r) => Number(r.id))) }
+              : { field: 'id', ids: new Set(mine.map((r) => Number(r['guestId']))) };
+          }),
+          catchError(() =>
+            of({ field: mode === 'reservation' ? 'reservationId' : 'id', ids: new Set<number>() }),
+          ),
+        );
+      }),
+      catchError(() => of({ field: mode === 'property' ? 'propertyId' : mode === 'reservation' ? 'reservationId' : 'id', ids: new Set<number>() })),
+    );
   }
 
   // ---------------- data loading ----------------
@@ -118,10 +167,71 @@ export class ResourcePageComponent implements OnInit {
     }
     this.crud.list<Row>(this.config.apiBase, params).subscribe({
       next: (data) => {
-        this.rows.set(data);
+        // Client-side manager scoping: keep only rows in the allowed id set.
+        const scope = this.scopeIds();
+        const field = this.scopeField();
+        const rows = scope ? data.filter((r) => scope.has(Number(r[field]))) : data;
+        this.rows.set(rows);
+        this.fillMissingRefOptions(rows);
         this.loading.set(false);
       },
       error: () => this.loading.set(false),
+    });
+  }
+
+  /**
+   * Resolve reference labels for ids that the (manager-scoped) options list
+   * doesn't contain. A PROPERTY_MANAGER's /api/properties list is limited to
+   * their own properties, so a property referenced by another resource's row
+   * (e.g. a reservation) would show "#id". We fetch those by id (unscoped) and
+   * merge them in. Only runs for managers and only for references whose target
+   * is itself manager-scoped, so it makes no extra calls otherwise.
+   */
+  private fillMissingRefOptions(rows: Row[]): void {
+    if (this.auth.role() !== 'PROPERTY_MANAGER') {
+      return;
+    }
+    const refFields = this.config.fields.filter((f) => f.type === 'reference' && f.ref);
+    for (const f of refFields) {
+      const key = f.ref!.resourceKey;
+      const target = getResource(key);
+      if (!target || !target.roleScope?.['PROPERTY_MANAGER']) {
+        continue; // only a scoped reference list can be missing ids
+      }
+      const have = new Set(this.optionsForResource(key).map((o) => o.value));
+      const missing = [
+        ...new Set(rows.map((r) => Number(r[f.key])).filter((v) => Number.isFinite(v) && v > 0 && !have.has(v))),
+      ];
+      if (!missing.length) {
+        continue;
+      }
+      const labelFields = f.ref!.labelFields;
+      forkJoin(
+        missing.map((id) => this.crud.get<Row>(target.apiBase, id).pipe(catchError(() => of(null)))),
+      ).subscribe((recs) => {
+        const add: RefOption[] = [];
+        for (const rec of recs) {
+          if (!rec) {
+            continue;
+          }
+          const parts = labelFields.map((lf) => rec[lf]).filter((v) => v !== undefined && v !== null && v !== '');
+          add.push({ value: rec.id, label: parts.length ? parts.join(' · ') : `#${rec.id}` });
+        }
+        if (add.length) {
+          this.mergeRefOptions(key, add);
+        }
+      });
+    }
+  }
+
+  /** Merge options by value so async list + by-id resolution don't clobber each other. */
+  private mergeRefOptions(key: string, opts: RefOption[]): void {
+    this.refOptions.update((m) => {
+      const byVal = new Map((m[key] ?? []).map((o) => [o.value, o]));
+      for (const o of opts) {
+        byVal.set(o.value, o);
+      }
+      return { ...m, [key]: [...byVal.values()] };
     });
   }
 
@@ -157,11 +267,15 @@ export class ResourcePageComponent implements OnInit {
       const labelFields = this.labelFieldsFor(key);
       this.crud.list<Row>(target.apiBase).subscribe({
         next: (data) => {
-          const opts: RefOption[] = data.map((r) => ({
-            value: r.id,
-            label: `#${r.id} · ` + labelFields.map((lf) => r[lf]).filter((v) => v !== undefined && v !== null).join(' · '),
-          }));
-          this.refOptions.update((m) => ({ ...m, [key]: opts }));
+          const opts: RefOption[] = data.map((r) => {
+            // Show the meaningful label (e.g. title · city, or a name); fall back
+            // to the id only when the record has no descriptive fields.
+            const parts = labelFields
+              .map((lf) => r[lf])
+              .filter((v) => v !== undefined && v !== null && v !== '');
+            return { value: r.id, label: parts.length ? parts.join(' · ') : `#${r.id}` };
+          });
+          this.mergeRefOptions(key, opts);
         },
         // A 403/empty just means we fall back to a plain number input.
         error: () => {},

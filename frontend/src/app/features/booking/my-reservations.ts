@@ -1,8 +1,9 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
-import { CurrencyPipe } from '@angular/common';
+import { CurrencyPipe, DatePipe } from '@angular/common';
 import { forkJoin } from 'rxjs';
 import { ToastService } from '../../core/services/toast.service';
-import { ReservationResponse } from '../../core/models/dtos';
+import { CrudService } from '../../core/services/crud.service';
+import { CheckInRecordResponse, CheckOutRecordResponse, PropertyResponse, ReservationResponse } from '../../core/models/dtos';
 import { LabelizePipe } from '../../shared/pipes/labelize.pipe';
 import { OwnerDialogComponent } from '../../shared/ui/owner-dialog';
 import { BookingService, ReviewInput } from './booking.service';
@@ -19,12 +20,19 @@ interface Category {
 @Component({
   selector: 'app-my-reservations',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CurrencyPipe, LabelizePipe, OwnerDialogComponent],
+  imports: [CurrencyPipe, DatePipe, LabelizePipe, OwnerDialogComponent],
   templateUrl: './my-reservations.html',
 })
 export class MyReservationsComponent {
   private booking = inject(BookingService);
   private toast = inject(ToastService);
+  private crud = inject(CrudService);
+
+  /** propertyId → title, so the table shows the property name, not "#id". */
+  protected readonly propertyNames = signal<Map<number, string>>(new Map());
+  /** reservationId → actual arrival / departure timestamps (from the stay records). */
+  protected readonly checkInAt = signal<Map<number, string>>(new Map());
+  protected readonly checkOutAt = signal<Map<number, string>>(new Map());
 
   protected readonly stars = [1, 2, 3, 4, 5];
   protected readonly categories: Category[] = [
@@ -59,6 +67,69 @@ export class MyReservationsComponent {
       },
       error: () => this.loading.set(false),
     });
+
+    // Resolve property ids to names for the table (read-only lookup).
+    this.crud.list<PropertyResponse>('/api/properties').subscribe({
+      next: (props) => this.propertyNames.set(new Map(props.map((p) => [p.id, p.title]))),
+      error: () => {},
+    });
+
+    // Actual arrival times (guests may read check-in records).
+    this.crud.list<CheckInRecordResponse>('/api/check-ins').subscribe({
+      next: (recs) =>
+        this.checkInAt.set(new Map(recs.filter((r) => r.actualCheckIn).map((r) => [r.reservationId, r.actualCheckIn as string]))),
+      error: () => {},
+    });
+    // Actual departure times (from check-out records).
+    this.crud.list<CheckOutRecordResponse>('/api/check-outs').subscribe({
+      next: (recs) =>
+        this.checkOutAt.set(new Map(recs.filter((r) => r.actualCheckOut).map((r) => [r.reservationId, r.actualCheckOut as string]))),
+      error: () => {},
+    });
+  }
+
+  protected propertyName(id: number): string {
+    return this.propertyNames().get(id) ?? `#${id}`;
+  }
+
+  protected actualCheckIn(r: ReservationResponse): string | null {
+    return this.checkInAt().get(r.id) ?? null;
+  }
+  protected actualCheckOut(r: ReservationResponse): string | null {
+    return this.checkOutAt().get(r.id) ?? null;
+  }
+
+  /** Progress of the stay itself (separate from the booking's approval status). */
+  protected stayState(r: ReservationResponse): 'COMPLETED' | 'CHECKED_IN' | 'NOT_CHECKED_IN' {
+    if (this.checkOutAt().has(r.id) || r.status === 'CHECKED_OUT') {
+      return 'COMPLETED';
+    }
+    if (this.checkInAt().has(r.id) || r.status === 'ACTIVE') {
+      return 'CHECKED_IN';
+    }
+    return 'NOT_CHECKED_IN';
+  }
+
+  protected stayLabel(r: ReservationResponse): string {
+    switch (this.stayState(r)) {
+      case 'COMPLETED':
+        return 'Completed';
+      case 'CHECKED_IN':
+        return 'Checked in';
+      default:
+        return 'Not checked in';
+    }
+  }
+
+  protected stayBadge(r: ReservationResponse): string {
+    switch (this.stayState(r)) {
+      case 'COMPLETED':
+        return 'text-bg-success';
+      case 'CHECKED_IN':
+        return 'text-bg-info';
+      default:
+        return 'text-bg-secondary';
+    }
   }
 
   /** Reviewable once the stay is checked out (a check-out record exists, or the

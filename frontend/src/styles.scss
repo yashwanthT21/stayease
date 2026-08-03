@@ -83,34 +83,165 @@ body {
   flex: 1 1 auto;
 }
 
-/* Auth pages */
+/* ===================================================================
+   Auth pages (login / register) — split brand panel + form card.
+   =================================================================== */
 .se-auth-wrap {
   min-height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #0d6efd 0%, #6610f2 100%);
-  padding: 1rem;
+  padding: 1.5rem;
+  background:
+    radial-gradient(1100px 550px at 8% -10%, rgba(13, 148, 136, 0.10), transparent 60%),
+    radial-gradient(1000px 520px at 112% 115%, rgba(14, 165, 233, 0.10), transparent 55%),
+    linear-gradient(135deg, #f6f8fb 0%, #eef2f7 100%);
 }
 
-.se-auth-card {
+/* Card shell that holds the two panels. */
+.se-auth-shell {
   width: 100%;
-  max-width: 420px;
-  border-radius: 1.1rem;
+  max-width: 920px;
+  display: grid;
+  grid-template-columns: 1.05fr 1fr;
+  background: #fff;
+  border-radius: 1.4rem;
+  overflow: hidden;
+  box-shadow: 0 34px 90px -34px rgba(0, 0, 0, 0.65);
 }
 
-/* Gradient brand logo chip on the auth screens. */
-.se-auth-logo {
-  width: 60px;
-  height: 60px;
+/* Left: branded gradient panel. */
+.se-auth-brand {
+  position: relative;
+  overflow: hidden;
+  color: #fff;
+  padding: 2.25rem 2.25rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  background: linear-gradient(150deg, #0d9488 0%, #0891b2 50%, #0ea5e9 100%);
+}
+.se-auth-brand-glow {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: radial-gradient(440px 440px at 82% 8%, rgba(255, 255, 255, 0.22), transparent 60%);
+}
+.se-auth-brand-inner {
+  position: relative;
+  z-index: 2;
+}
+.se-auth-brand-logo {
+  width: 56px;
+  height: 56px;
   border-radius: 1rem;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #4f8cff, #2563eb);
+  font-size: 1.6rem;
+  background: rgba(255, 255, 255, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+}
+.se-auth-brand-title {
+  font-weight: 800;
+  font-size: 1.95rem;
+  margin: 0 0 0.5rem;
+}
+.se-auth-brand-sub {
+  opacity: 0.9;
+  max-width: 34ch;
+  margin-bottom: 1.85rem;
+}
+.se-auth-feats {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+.se-auth-feats li {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  font-size: 0.95rem;
+  opacity: 0.96;
+}
+.se-auth-feats i {
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  border-radius: 0.6rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+}
+
+/* Right: form panel. */
+.se-auth-form {
+  padding: 2.25rem 2.25rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.se-auth-heading {
+  font-weight: 800;
+  font-size: 1.5rem;
+  margin-bottom: 0.15rem;
+  color: #0f172a;
+}
+.se-auth-form .input-group-text {
+  background: #f0fdfa;
+  color: #0d9488;
+}
+/* Auth-scoped accent so the buttons/links match the teal brand panel
+   (leaves the rest of the app's blue primary buttons untouched). */
+.se-auth-form .btn-primary {
+  background-image: linear-gradient(135deg, #14b8a6, #0891b2);
+}
+.se-auth-form .btn-primary:hover,
+.se-auth-form .btn-primary:focus,
+.se-auth-form .btn-primary:active {
+  background-image: linear-gradient(135deg, #0d9488, #0e7490);
+}
+.se-auth-form .form-control:focus,
+.se-auth-form .form-select:focus {
+  border-color: #5eead4;
+  box-shadow: 0 0 0 0.2rem rgba(13, 148, 136, 0.18);
+}
+.se-auth-form a {
+  color: #0891b2;
+}
+
+/* Gradient brand logo chip (used on the compact mobile header). */
+.se-auth-logo {
+  width: 56px;
+  height: 56px;
+  border-radius: 1rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #2dd4bf, #0891b2);
   color: #fff;
-  font-size: 1.8rem;
-  box-shadow: 0 10px 22px -10px rgba(37, 99, 235, 0.6);
+  font-size: 1.6rem;
+  box-shadow: 0 10px 22px -10px rgba(13, 148, 136, 0.6);
+}
+
+/* Stack to a single column on small screens (hide the brand panel). */
+@media (max-width: 767.98px) {
+  .se-auth-shell {
+    grid-template-columns: 1fr;
+    max-width: 440px;
+  }
+  .se-auth-brand {
+    display: none;
+  }
+  .se-auth-form {
+    padding: 2rem 1.6rem;
+  }
 }
 
 /* Reusable modal backdrop (we drive Bootstrap modal markup with a signal) */

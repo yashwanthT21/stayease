@@ -18,8 +18,10 @@ export const REVIEW_RESOURCE: ResourceConfig = {
   singular: 'Review',
   icon: 'bi-star',
   group: 'Stay',
-  // Reviews are written by guests; managers only view them here.
+  // Reviews are written by guests; managers only view them here, and only for
+  // reservations at their own properties.
   readOnlyRoles: ['PROPERTY_MANAGER'],
+  managerScope: 'reservation',
   listColumns: ['id', 'reservationId', 'guestId', 'overallScore', 'cleanlinessScore', 'accuracyScore', 'locationScore', 'valueScore', 'status'],
   filters: [
     { key: 'reservationId', label: 'Reservation', type: 'reference', ref: reservationRef },

@@ -2,7 +2,7 @@
   <app-owner-dialog [title]="'Checklist · ' + propertyTitle" icon="bi-check2-square" size="lg" (dismiss)="close.emit()">
     <div class="modal-body">
       <p class="text-muted small mb-3">
-        Turnover #{{ t.id }} · reservation {{ t.checkOutReservationId ? '#' + t.checkOutReservationId : '—' }} ·
+        Reservation {{ t.checkOutReservationId || '—' }} ·
         housekeeper status <span class="badge {{ hkBadge(t.housekeeperStatus) }}">{{ t.housekeeperStatus | labelize }}</span>
       </p>
 

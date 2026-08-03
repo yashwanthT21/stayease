@@ -3,12 +3,15 @@ import { ResourceConfig } from '../shared/crud/resource-config';
 import { CHECK_IN_RESOURCE } from '../features/stay/check-in.resource';
 import { CHECK_OUT_RESOURCE } from '../features/stay/check-out.resource';
 import { REVIEW_RESOURCE } from '../features/stay/review.resource';
+// Maintenance-domain screen config is owned by the maintenance module.
+import { MAINTENANCE_ISSUE_RESOURCE } from '../features/maintenance/maintenance-issue.resource';
+import { PREVENTIVE_MAINTENANCE_RESOURCE } from '../features/maintenance/preventive-maintenance.resource';
 import {
   AVAILABILITY_STATUSES, BOOKING_SOURCES,
-  CHECKLIST_CATEGORIES, CHECKLIST_STATUSES, GUEST_STATUSES, MAINTENANCE_CATEGORIES,
-  MAINTENANCE_PRIORITIES, MAINTENANCE_STATUSES, NOTIFICATION_CATEGORIES, NOTIFICATION_STATUSES,
-  PAYOUT_STATUSES, PREVENTIVE_FREQUENCIES, PREVENTIVE_STATUSES,
-  PROPERTY_STATUSES, PROPERTY_TYPES, REPORTED_BY_TYPES, RESERVATION_STATUSES,
+  CHECKLIST_CATEGORIES, CHECKLIST_STATUSES, GUEST_STATUSES,
+  NOTIFICATION_CATEGORIES, NOTIFICATION_STATUSES,
+  PAYOUT_STATUSES,
+  PROPERTY_STATUSES, PROPERTY_TYPES, RESERVATION_STATUSES,
   STATEMENT_STATUSES, TURNOVER_STATUSES, USER_ROLES, USER_STATUSES, VERIFICATION_STATUSES,
 } from './models/enums';
 
@@ -82,8 +85,10 @@ export const RESOURCES: ResourceConfig[] = [
     singular: 'Guest profile',
     icon: 'bi-person-badge',
     group: 'Booking',
-    // Managers may view guest profiles but not create/edit them.
+    // Managers may view guest profiles but not create/edit them, and only the
+    // guests who have booked one of their properties.
     readOnlyRoles: ['PROPERTY_MANAGER'],
+    managerScope: 'reservationGuest',
     listColumns: ['id', 'name', 'email', 'phone', 'nationality', 'verificationStatus', 'reviewScore', 'bookingCount', 'status'],
     filters: [{ key: 'userId', label: 'User ID', type: 'number' }],
     fields: [
@@ -106,8 +111,10 @@ export const RESOURCES: ResourceConfig[] = [
     icon: 'bi-journal-check',
     group: 'Booking',
     // Managers view reservations (created by the customer booking flow) but do
-    // not create them manually — they approve/reject pending requests instead.
+    // not create them manually — they approve/reject pending requests instead,
+    // and only for their own properties.
     readOnlyRoles: ['PROPERTY_MANAGER'],
+    managerScope: 'property',
     patchActions: [
       { label: 'Approve', icon: 'bi-check2-circle', suffix: '/approve', showWhen: (r) => r['status'] === 'PENDING' },
       { label: 'Reject', icon: 'bi-x-circle', suffix: '/reject', showWhen: (r) => r['status'] === 'PENDING', variant: 'danger' },
@@ -187,50 +194,10 @@ export const RESOURCES: ResourceConfig[] = [
   },
 
   // ========================== MAINTENANCE ==========================
-  {
-    key: 'maintenance-issues',
-    apiBase: '/api/maintenance-issues',
-    title: 'Maintenance Issues',
-    singular: 'Issue',
-    icon: 'bi-tools',
-    group: 'Maintenance',
-    listColumns: ['id', 'propertyId', 'category', 'priority', 'reportedByType', 'reportedDate', 'amountSpent', 'status'],
-    filters: [
-      { key: 'propertyId', label: 'Property', type: 'reference', ref: propertyRef },
-      { key: 'status', label: 'Status', type: 'select', options: MAINTENANCE_STATUSES },
-    ],
-    fields: [
-      { key: 'propertyId', label: 'Property', type: 'reference', ref: propertyRef, required: true },
-      { key: 'reportedById', label: 'Reported by (user id)', type: 'number', required: true, min: 1 },
-      { key: 'reportedByType', label: 'Reporter type', type: 'select', options: REPORTED_BY_TYPES, required: true },
-      { key: 'category', label: 'Category', type: 'select', options: MAINTENANCE_CATEGORIES, required: true },
-      { key: 'description', label: 'Description', type: 'textarea' },
-      { key: 'priority', label: 'Priority', type: 'select', options: MAINTENANCE_PRIORITIES, help: 'Defaults to MEDIUM.' },
-      { key: 'assignedContractorId', label: 'Contractor (user id)', type: 'number', min: 1 },
-      { key: 'resolvedDate', label: 'Resolved date', type: 'datetime' },
-      { key: 'amountSpent', label: 'Amount spent', type: 'money', min: 0, help: 'Repair cost logged on resolution; feeds the owner statement.' },
-      { key: 'status', label: 'Status', type: 'select', options: MAINTENANCE_STATUSES, help: 'Defaults to OPEN.' },
-      { key: 'reportedDate', label: 'Reported', type: 'datetime', hideInForm: true },
-    ],
-  },
-  {
-    key: 'preventive-maintenance',
-    apiBase: '/api/preventive-maintenance',
-    title: 'Preventive Maintenance',
-    singular: 'Preventive task',
-    icon: 'bi-clipboard-check',
-    group: 'Maintenance',
-    listColumns: ['id', 'propertyId', 'taskName', 'frequency', 'nextScheduledDate', 'lastCompletedDate', 'status'],
-    filters: [{ key: 'propertyId', label: 'Property', type: 'reference', ref: propertyRef }],
-    fields: [
-      { key: 'propertyId', label: 'Property', type: 'reference', ref: propertyRef, required: true },
-      { key: 'taskName', label: 'Task name', type: 'text', required: true, maxLength: 150 },
-      { key: 'frequency', label: 'Frequency', type: 'select', options: PREVENTIVE_FREQUENCIES, required: true },
-      { key: 'nextScheduledDate', label: 'Next scheduled', type: 'date' },
-      { key: 'lastCompletedDate', label: 'Last completed', type: 'date' },
-      { key: 'status', label: 'Status', type: 'select', options: PREVENTIVE_STATUSES, help: 'Defaults to SCHEDULED.' },
-    ],
-  },
+  // Config lives in the maintenance module (features/maintenance), mirroring the
+  // backend's MaintenanceIssue / PreventiveMaintenance entities.
+  MAINTENANCE_ISSUE_RESOURCE,
+  PREVENTIVE_MAINTENANCE_RESOURCE,
 
   // ============================ FINANCE ============================
   {

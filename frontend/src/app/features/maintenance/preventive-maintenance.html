@@ -1,0 +1,132 @@
+<app-owner-page-header icon="bi-clipboard-check" title="Preventive Maintenance" subtitle="Schedule recurring upkeep so small issues never become big ones.">
+  <button headerActions class="btn btn-primary btn-sm" (click)="openCreate()"><i class="bi bi-plus-lg me-1"></i>New task</button>
+</app-owner-page-header>
+
+<div class="card shadow-sm border-0 overflow-hidden">
+  <div class="card-header bg-white border-bottom d-flex flex-wrap gap-2 align-items-center">
+    <div class="input-group input-group-sm" style="max-width: 300px">
+      <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
+      <input type="text" class="form-control" placeholder="Search task, property, status…" (input)="onSearch($event)" />
+    </div>
+    <select class="form-select form-select-sm" style="max-width: 220px" (change)="onPropertyFilter($event)">
+      <option value="">All properties</option>
+      @for (p of properties(); track p.id) {
+        <option [value]="p.id">{{ p.title }}</option>
+      }
+    </select>
+  </div>
+
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>ID</th>
+          <th>Property</th>
+          <th>Task</th>
+          <th>Frequency</th>
+          <th>Next scheduled</th>
+          <th>Last completed</th>
+          <th>Status</th>
+          <th class="text-end">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        @if (loading()) {
+          <tr><td colspan="8" class="text-center text-muted py-4"><div class="spinner-border spinner-border-sm text-primary me-2"></div>Loading…</td></tr>
+        } @else if (filtered().length === 0) {
+          <tr><td colspan="8" class="text-center text-muted py-5"><i class="bi bi-clipboard-check fs-3 d-block mb-2"></i>No preventive tasks yet.</td></tr>
+        } @else {
+          @for (t of filtered(); track t.id) {
+            <tr>
+              <td class="text-muted">{{ t.id }}</td>
+              <td class="fw-semibold">{{ propertyTitle(t.propertyId) }}</td>
+              <td>{{ t.taskName }}</td>
+              <td>{{ t.frequency | labelize }}</td>
+              <td class="text-nowrap">{{ t.nextScheduledDate || '—' }}</td>
+              <td class="text-nowrap">{{ t.lastCompletedDate || '—' }}</td>
+              <td><span class="badge {{ statusBadge(t.status) }}">{{ t.status | labelize }}</span></td>
+              <td class="text-end text-nowrap">
+                <button class="btn btn-sm btn-outline-secondary me-1" (click)="openEdit(t)" title="Edit"><i class="bi bi-pencil"></i></button>
+                <button class="btn btn-sm btn-outline-danger" (click)="askDelete(t)" title="Delete"><i class="bi bi-trash"></i></button>
+              </td>
+            </tr>
+          }
+        }
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Create / edit modal -->
+@if (modalOpen()) {
+  <app-owner-dialog [title]="editingId() === null ? 'New preventive task' : 'Edit preventive task'" icon="bi-clipboard-check" size="lg" (dismiss)="closeModal()">
+    <form [formGroup]="form" (ngSubmit)="submit()">
+      <div class="modal-body">
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label">Property <span class="text-danger">*</span></label>
+            <select class="form-select" [class.is-invalid]="propertyMissing()" (change)="onProperty($event)">
+              <option value="" [selected]="selectedPropertyId() === null">— Select a property —</option>
+              @for (p of properties(); track p.id) {
+                <option [value]="p.id" [selected]="selectedPropertyId() === p.id">{{ p.title }} · {{ p.city }}</option>
+              }
+            </select>
+            <div class="invalid-feedback">A property is required.</div>
+            @if (properties().length === 0) { <div class="form-text">No properties available.</div> }
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Task name <span class="text-danger">*</span></label>
+            <input type="text" class="form-control" formControlName="taskName" [class.is-invalid]="invalid('taskName')" maxlength="150" placeholder="e.g. HVAC filter change" />
+            <div class="invalid-feedback">A task name is required.</div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Frequency <span class="text-danger">*</span></label>
+            <select class="form-select" (change)="onFrequency($event)">
+              @for (f of frequencies; track f) {
+                <option [value]="f" [selected]="selectedFrequency() === f">{{ f | labelize }}</option>
+              }
+            </select>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Status</label>
+            <select class="form-select" (change)="onStatus($event)">
+              @for (s of statuses; track s) {
+                <option [value]="s" [selected]="selectedStatus() === s">{{ s | labelize }}</option>
+              }
+            </select>
+            <div class="form-text">Defaults to Scheduled.</div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Next scheduled</label>
+            <input type="date" class="form-control" formControlName="nextScheduledDate" />
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Last completed</label>
+            <input type="date" class="form-control" formControlName="lastCompletedDate" />
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" (click)="closeModal()">Cancel</button>
+        <button type="submit" class="btn btn-primary" [disabled]="saving()">
+          @if (saving()) { <span class="spinner-border spinner-border-sm me-1"></span> }
+          {{ editingId() === null ? 'Create task' : 'Save changes' }}
+        </button>
+      </div>
+    </form>
+  </app-owner-dialog>
+}
+
+<!-- Delete confirm -->
+@if (deleteTarget(); as target) {
+  <app-owner-dialog title="Delete preventive task" icon="bi-exclamation-triangle" size="md" (dismiss)="cancelDelete()">
+    <div class="modal-body">
+      Delete <strong>{{ target.taskName }}</strong> for {{ propertyTitle(target.propertyId) }}? This cannot be undone.
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-outline-secondary" (click)="cancelDelete()">Cancel</button>
+      <button type="button" class="btn btn-danger" (click)="confirmDelete()">Delete</button>
+    </div>
+  </app-owner-dialog>
+}

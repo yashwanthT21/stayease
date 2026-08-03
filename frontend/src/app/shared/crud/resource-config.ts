@@ -87,4 +87,15 @@ export interface ResourceConfig {
   hideInNav?: boolean;
   /** Optional per-role list scoping (e.g. managers see only their properties). */
   roleScope?: RoleScope;
+  /**
+   * Client-side scoping for a PROPERTY_MANAGER (these aren't scoped by the
+   * backend). Other roles are unaffected.
+   *   'property'         — rows whose propertyId is one the manager manages
+   *                        (e.g. reservations, maintenance issues, preventive).
+   *   'reservation'      — rows whose reservationId belongs to a reservation at
+   *                        one of the manager's properties (e.g. reviews).
+   *   'reservationGuest' — guest rows for guests who have a reservation at one
+   *                        of the manager's properties.
+   */
+  managerScope?: 'property' | 'reservation' | 'reservationGuest';
 }
