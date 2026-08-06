@@ -59,13 +59,13 @@
             <groupId>org.springframework.cloud</groupId>
             <artifactId>spring-cloud-starter-netflix-eureka-client</artifactId>
         </dependency>
-        <!-- Client-side load balancing so a @LoadBalanced RestClient can resolve
-             http://notification-service to a live instance. (Pulled in transitively
-             by eureka-client, but declared explicitly for clarity.) -->
-        <!-- <dependency>
+        <!-- Declarative REST clients for the outbound calls (notification-service
+             and IAM). spring-cloud-starter-openfeign brings in the load balancer,
+             so a @FeignClient can resolve a service NAME to a live instance. -->
+        <dependency>
             <groupId>org.springframework.cloud</groupId>
-            <artifactId>spring-cloud-starter-loadbalancer</artifactId>
-        </dependency> -->
+            <artifactId>spring-cloud-starter-openfeign</artifactId>
+        </dependency>
 
         <dependency>
             <groupId>org.springdoc</groupId>
@@ -77,6 +77,13 @@
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
             <optional>true</optional>
+        </dependency>
+
+        <!-- Unit tests: JUnit 5 + AssertJ + Mockito (see src/test/java). -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
         </dependency>
     </dependencies>
 

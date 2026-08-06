@@ -1,0 +1,201 @@
+<app-owner-page-header icon="bi-check2-square" title="Turnover Checklists"
+                      subtitle="The tasks that make up each clean, for the turnovers assigned to you.">
+  @if (canEdit()) {
+    <button headerActions class="btn btn-primary btn-sm" (click)="openCreate()" [disabled]="loading() || turnovers().length === 0">
+      <i class="bi bi-plus-lg me-1"></i>New checklist item
+    </button>
+  }
+</app-owner-page-header>
+
+@if (!loading() && turnovers().length === 0) {
+  <div class="alert alert-info d-flex align-items-center gap-2">
+    <i class="bi bi-info-circle-fill"></i>
+    <span>No turnovers are assigned to you yet — a property manager creates a turnover first, then you build its checklist.</span>
+  </div>
+}
+
+<div class="card shadow-sm border-0 overflow-hidden">
+  <!-- Filters -->
+  <div class="card-header bg-white border-bottom">
+    <div class="row g-2 align-items-end">
+      <div class="col-12 col-lg-4">
+        <label class="form-label small mb-1">Turnover</label>
+        <select class="form-select form-select-sm" [seSelectValue]="turnoverFilter()" (seSelectValueChange)="onTurnoverFilter($event)">
+          <option value="">All my turnovers</option>
+          @for (t of turnovers(); track t.id) {
+            <option [value]="t.id">{{ turnoverLabel(t.id) }}</option>
+          }
+        </select>
+      </div>
+      <div class="col-6 col-lg-2">
+        <label class="form-label small mb-1">Category</label>
+        <select class="form-select form-select-sm" [seSelectValue]="categoryFilter()" (seSelectValueChange)="onCategoryFilter($event)">
+          <option value="">All</option>
+          @for (c of categories; track c) { <option [value]="c">{{ c | labelize }}</option> }
+        </select>
+      </div>
+      <div class="col-6 col-lg-2">
+        <label class="form-label small mb-1">Status</label>
+        <select class="form-select form-select-sm" [seSelectValue]="statusFilter()" (seSelectValueChange)="onStatusFilter($event)">
+          <option value="">All</option>
+          @for (s of statuses; track s) { <option [value]="s">{{ s | labelize }}</option> }
+        </select>
+      </div>
+      <div class="col-6 col-lg-2">
+        <label class="form-label small mb-1">Completion</label>
+        <select class="form-select form-select-sm" [seSelectValue]="completionFilter()" (seSelectValueChange)="onCompletionFilter($event)">
+          <option value="">All</option>
+          <option value="DONE">Completed</option>
+          <option value="TODO">Not completed</option>
+        </select>
+      </div>
+      <div class="col-6 col-lg-2">
+        <label class="form-label small mb-1">Search</label>
+        <input type="search" class="form-control form-control-sm" placeholder="Task or notes…" [value]="search()" (input)="onSearch($event)" />
+      </div>
+    </div>
+
+    <div class="d-flex align-items-center gap-3 mt-2 small text-muted">
+      <span><i class="bi bi-list-check me-1"></i>{{ doneCount() }} of {{ filtered().length }} done</span>
+      @if (anyFilterActive()) {
+        <button type="button" class="btn btn-sm btn-link p-0" (click)="clearFilters()">Clear filters</button>
+      }
+    </div>
+  </div>
+
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead class="table-light">
+        <tr>
+          <th style="width: 3rem" class="text-center">Done</th>
+          <th>Task</th>
+          <th>Turnover</th>
+          <th>Category</th>
+          <th>Status</th>
+          <th>Notes</th>
+          @if (canEdit()) { <th class="text-end">Actions</th> }
+        </tr>
+      </thead>
+      <tbody>
+        @if (loading()) {
+          <tr><td [attr.colspan]="canEdit() ? 7 : 6" class="text-center text-muted py-4"><div class="spinner-border spinner-border-sm text-primary me-2"></div>Loading…</td></tr>
+        } @else if (filtered().length === 0) {
+          <tr><td [attr.colspan]="canEdit() ? 7 : 6" class="text-center text-muted py-5">
+            <i class="bi bi-check2-square fs-3 d-block mb-2"></i>
+            @if (anyFilterActive()) { No checklist items match these filters. } @else { No checklist items yet. }
+          </td></tr>
+        } @else {
+          @for (c of filtered(); track c.id) {
+            <tr>
+              <td class="text-center">
+                @if (canEdit()) {
+                  <input type="checkbox" class="form-check-input" [checked]="c.completed"
+                         [title]="c.completed ? 'Mark as not done' : 'Mark as done'" (change)="toggleCompleted(c)" />
+                } @else if (c.completed) {
+                  <i class="bi bi-check-circle-fill text-success"></i>
+                } @else {
+                  <i class="bi bi-dash-circle text-muted"></i>
+                }
+              </td>
+              <td class="fw-semibold" [class.text-decoration-line-through]="c.completed">{{ c.taskName }}</td>
+              <td class="small text-body-secondary">{{ turnoverLabel(c.turnoverId) }}</td>
+              <td>{{ c.category | labelize }}</td>
+              <td><span class="badge {{ statusBadge(c.status) }}">{{ c.status | labelize }}</span></td>
+              <td class="text-muted small">{{ c.notes || '—' }}</td>
+              @if (canEdit()) {
+                <td class="text-end text-nowrap">
+                  <button class="btn btn-sm btn-outline-secondary me-1" (click)="openEdit(c)" title="Edit"><i class="bi bi-pencil"></i></button>
+                  <button class="btn btn-sm btn-outline-danger" (click)="askDelete(c)" title="Delete"><i class="bi bi-trash"></i></button>
+                </td>
+              }
+            </tr>
+          }
+        }
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Create / edit modal -->
+@if (modalOpen()) {
+  <app-owner-dialog [title]="editingId() === null ? 'New checklist item' : 'Edit checklist item'" icon="bi-check2-square" size="lg" (dismiss)="closeModal()">
+    <form [formGroup]="form" (ngSubmit)="submit()">
+      <div class="modal-body">
+        <div class="row g-3">
+          <!-- The turnover this task belongs to: real turnovers, readable labels. -->
+          <div class="col-12">
+            <label class="form-label">Turnover <span class="text-danger">*</span></label>
+            <select class="form-select" [class.is-invalid]="turnoverMissing()"
+                    [seSelectValue]="selectedTurnoverId() ?? ''" (seSelectValueChange)="onTurnoverChange($event)">
+              <option value="">— Select the turnover this task belongs to —</option>
+              @for (t of turnovers(); track t.id) {
+                <option [value]="t.id">{{ turnoverLabel(t.id) }}</option>
+              }
+            </select>
+            <div class="invalid-feedback">Choose the turnover this checklist item belongs to.</div>
+            @if (turnovers().length === 0) {
+              <div class="form-text text-danger">No turnovers are assigned to you yet.</div>
+            } @else {
+              <div class="form-text">Turnovers are created by your property manager.</div>
+            }
+          </div>
+
+          <div class="col-md-8">
+            <label class="form-label">Task name <span class="text-danger">*</span></label>
+            <input type="text" class="form-control" formControlName="taskName" [class.is-invalid]="invalid('taskName')"
+                   maxlength="150" placeholder="e.g. Strip and remake all beds" />
+            <div class="invalid-feedback">A task name is required (max 150 characters).</div>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Category <span class="text-danger">*</span></label>
+            <select class="form-select" [class.is-invalid]="categoryMissing()"
+                    [seSelectValue]="selectedCategory()" (seSelectValueChange)="onCategoryChange($event)">
+              <option value="">— Select —</option>
+              @for (c of categories; track c) { <option [value]="c">{{ c | labelize }}</option> }
+            </select>
+            <div class="invalid-feedback">Choose a category.</div>
+          </div>
+
+          <div class="col-md-4">
+            <label class="form-label">Status</label>
+            <select class="form-select" [seSelectValue]="selectedStatus()" (seSelectValueChange)="onStatusChange($event)">
+              @for (s of statuses; track s) { <option [value]="s">{{ s | labelize }}</option> }
+            </select>
+            <div class="form-text">Defaults to Pending.</div>
+          </div>
+          <div class="col-md-4 d-flex align-items-end">
+            <div class="form-check mb-2">
+              <input type="checkbox" class="form-check-input" id="completed" formControlName="completed" />
+              <label class="form-check-label" for="completed">Completed</label>
+            </div>
+          </div>
+          <div class="col-12">
+            <label class="form-label">Notes</label>
+            <textarea class="form-control" rows="2" formControlName="notes" placeholder="Anything the manager should know…"></textarea>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" (click)="closeModal()">Cancel</button>
+        <button type="submit" class="btn btn-primary" [disabled]="saving()">
+          @if (saving()) { <span class="spinner-border spinner-border-sm me-1"></span> }
+          {{ editingId() === null ? 'Create item' : 'Save changes' }}
+        </button>
+      </div>
+    </form>
+  </app-owner-dialog>
+}
+
+<!-- Delete confirm -->
+@if (deleteTarget(); as target) {
+  <app-owner-dialog title="Delete checklist item" icon="bi-exclamation-triangle" size="md" (dismiss)="cancelDelete()">
+    <div class="modal-body">
+      Delete <strong>{{ target.taskName }}</strong>? This cannot be undone.
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-outline-secondary" (click)="cancelDelete()">Cancel</button>
+      <button type="button" class="btn btn-danger" (click)="confirmDelete()">Delete</button>
+    </div>
+  </app-owner-dialog>
+}

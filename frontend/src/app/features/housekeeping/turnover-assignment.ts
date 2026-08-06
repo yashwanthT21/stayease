@@ -13,6 +13,7 @@ import {
 import { HOUSEKEEPER_STATUSES, TURNOVER_STATUSES } from '../../core/models/enums';
 import { LabelizePipe } from '../../shared/pipes/labelize.pipe';
 import { OwnerDialogComponent } from '../../shared/ui/owner-dialog';
+import { SelectValueDirective } from '../../shared/ui/select-value';
 import { TurnoverChecklistComponent } from './turnover-checklist';
 
 /**
@@ -28,7 +29,7 @@ import { TurnoverChecklistComponent } from './turnover-checklist';
 @Component({
   selector: 'app-turnover-assignment',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [LabelizePipe, OwnerDialogComponent, TurnoverChecklistComponent],
+  imports: [LabelizePipe, OwnerDialogComponent, TurnoverChecklistComponent, SelectValueDirective],
   templateUrl: './turnover-assignment.html',
 })
 export class TurnoverAssignmentComponent {
@@ -156,16 +157,17 @@ export class TurnoverAssignmentComponent {
     this.modalOpen.set(false);
   }
 
-  protected onReservation(e: Event): void {
-    const v = (e.target as HTMLSelectElement).value;
-    this.reservationId.set(v ? Number(v) : null);
+  // Bound through SelectValueDirective: the reservation and housekeeper lists load
+  // asynchronously, and without it a pick made before they settled reverted to the
+  // placeholder while the signal still held the real choice.
+  protected onReservation(value: string): void {
+    this.reservationId.set(value ? Number(value) : null);
   }
-  protected onHousekeeper(e: Event): void {
-    const v = (e.target as HTMLSelectElement).value;
-    this.housekeeperId.set(v ? Number(v) : null);
+  protected onHousekeeper(value: string): void {
+    this.housekeeperId.set(value ? Number(value) : null);
   }
-  protected onStatus(e: Event): void {
-    this.status.set((e.target as HTMLSelectElement).value);
+  protected onStatus(value: string): void {
+    this.status.set(value);
   }
   protected onAssignedDate(e: Event): void {
     this.assignedDate.set((e.target as HTMLInputElement).value);
@@ -240,8 +242,10 @@ export class TurnoverAssignmentComponent {
   }
 
   /** Housekeeper marks their own work Pending/Completed. */
-  protected onHousekeeperStatus(t: TurnoverAssignmentResponse, event: Event): void {
-    const value = (event.target as HTMLSelectElement).value;
+  protected onHousekeeperStatus(t: TurnoverAssignmentResponse, value: string): void {
+    if (value === t.housekeeperStatus) {
+      return; // the directive re-asserting the current value, not a user change
+    }
     this.crud
       .patch<TurnoverAssignmentResponse>(`/api/turnovers/${t.id}/housekeeper-status?value=${value}`)
       .subscribe({
@@ -254,8 +258,10 @@ export class TurnoverAssignmentComponent {
   }
 
   /** Manager sets the overall status (backend rejects it until housekeeper is Completed). */
-  protected onManagerStatus(t: TurnoverAssignmentResponse, event: Event): void {
-    const value = (event.target as HTMLSelectElement).value;
+  protected onManagerStatus(t: TurnoverAssignmentResponse, value: string): void {
+    if (value === t.status) {
+      return; // no change
+    }
     this.crud
       .patch<TurnoverAssignmentResponse>(`/api/turnovers/${t.id}/manager-status?value=${value}`)
       .subscribe({

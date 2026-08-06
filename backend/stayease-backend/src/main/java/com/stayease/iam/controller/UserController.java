@@ -2,6 +2,7 @@ package com.stayease.iam.controller;
 
 import com.stayease.iam.dto.UserRequest;
 import com.stayease.iam.dto.UserResponse;
+import com.stayease.iam.dto.UserSummaryResponse;
 import com.stayease.iam.service.UserService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -69,10 +70,50 @@ public class UserController {
         return ResponseEntity.ok(userService.getHousekeepers());
     }
 
+    /**
+     * GET /api/users/owners — the list of OWNER users, so Finance can PICK whose
+     * statement they're building instead of typing a raw user id and silently
+     * posting a whole month's money against the wrong person. Declared before
+     * /{id}.
+     */
+    @GetMapping("/owners")
+    public ResponseEntity<List<UserResponse>> getOwners() {
+        return ResponseEntity.ok(userService.getOwners());
+    }
+
+    /**
+     * GET /api/users/directory — a people-picker feed.
+     *
+     * Same payload as GET /api/users, but reachable by owners and property
+     * managers rather than admins only: they need to name a person on records
+     * they own (e.g. who reported a maintenance issue) and shouldn't have to type
+     * a raw user id. It stays read-only — everything that mutates a user is still
+     * behind the admin-only /api/users/** rules. Declared before /{id}.
+     */
+    @GetMapping("/directory")
+    public ResponseEntity<List<UserResponse>> getDirectory() {
+        return ResponseEntity.ok(userService.getAll());
+    }
+
     /** GET /api/users/{id} — fetch one user. 200 OK, or 404 if not found. */
     @GetMapping("/{id}")
     public ResponseEntity<UserResponse> getById(@PathVariable Long id) {
         return ResponseEntity.ok(userService.getById(id));
+    }
+
+    /**
+     * GET /api/users/{id}/summary — id, name and role, nothing else.
+     *
+     * A label lookup, not a user record: it exists so a caller holding only a
+     * userId can render a person's name. property-service uses it (over Feign,
+     * forwarding the caller's token) to say "assigned by Ada Owner" rather than
+     * "assigned by user #5". Open to any authenticated caller — the same names are
+     * already visible through /api/users/directory — while everything that exposes
+     * contact details or mutates a user stays admin-only.
+     */
+    @GetMapping("/{id}/summary")
+    public ResponseEntity<UserSummaryResponse> getSummaryById(@PathVariable Long id) {
+        return ResponseEntity.ok(userService.getSummaryById(id));
     }
 
     /** PUT /api/users/{id} — update a user. 200 OK, or 404 if not found. */

@@ -282,6 +282,45 @@ body {
   text-overflow: ellipsis;
 }
 
+/* The counterpart to .se-truncate: inside the full-text reader the value must
+   wrap and break, so a long unbroken string (a URL, an id) can't push the dialog
+   wider than the viewport and reintroduce the clipping we opened it to escape. */
+.se-wrap-text {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* Editable in-cell dropdown. Sized to its content so a two-option switch doesn't
+   stretch the column, and kept off the table's text-nowrap baseline. */
+.se-row-editor {
+  width: auto;
+  min-width: 8.5rem;
+  display: inline-block;
+}
+
+/* The guest's verification badge on My Profile → Account standing. Now that the
+   card holds a single fact, it is rendered as one large state mark instead of a
+   label/value row that left the card looking half-empty. */
+.se-verify-mark {
+  width: 72px;
+  height: 72px;
+  margin-inline: auto;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2.1rem;
+  color: #64748b;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+}
+
+.se-verify-mark-on {
+  color: #15803d;
+  background: #dcfce7;
+  border-color: #bbf7d0;
+}
+
 .cursor-pointer {
   cursor: pointer;
 }
@@ -450,6 +489,19 @@ body {
   cursor: default;
 }
 .se-cal-cell.se-cal-static:hover {
+  box-shadow: none;
+  transform: none;
+}
+/* Days that have already passed: greyed out and not clickable — nobody edits or
+   books the past, whichever role is looking at the calendar. */
+.se-cal-cell.se-cal-past,
+.se-cal-cell:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+  filter: grayscale(0.7);
+}
+.se-cal-cell.se-cal-past:hover,
+.se-cal-cell:disabled:hover {
   box-shadow: none;
   transform: none;
 }

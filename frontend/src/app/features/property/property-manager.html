@@ -66,8 +66,8 @@
           </div>
           <div class="col-md-4">
             <label class="form-label">Type <span class="text-danger">*</span></label>
-            <select class="form-select" (change)="onTypeChange($event)">
-              @for (t of types; track t) { <option [value]="t" [selected]="selectedType() === t">{{ t | labelize }}</option> }
+            <select class="form-select" [seSelectValue]="selectedType()" (seSelectValueChange)="onTypeChange($event)">
+              @for (t of types; track t) { <option [value]="t">{{ t | labelize }}</option> }
             </select>
           </div>
           <div class="col-md-8">
@@ -77,10 +77,10 @@
           </div>
           <div class="col-md-4">
             <label class="form-label">Manager</label>
-            <select class="form-select" (change)="onManagerChange($event)">
-              <option value="" [selected]="selectedManagerId() === null">— No manager —</option>
+            <select class="form-select" [seSelectValue]="selectedManagerId() ?? ''" (seSelectValueChange)="onManagerChange($event)">
+              <option value="">— No manager —</option>
               @for (m of managers(); track m.id) {
-                <option [value]="m.id" [selected]="selectedManagerId() === m.id">{{ m.name }} ({{ m.email }})</option>
+                <option [value]="m.id">{{ m.name }} ({{ m.email }})</option>
               }
             </select>
             @if (managers().length === 0) {
@@ -110,13 +110,38 @@
         <!-- Stay details -->
         <div class="se-owner-form-section">Stay details</div>
         <div class="row g-3 mb-2">
+          <!-- Default vs manual check-in/check-out timings -->
+          <div class="col-12">
+            <label class="form-label d-block">Check-in &amp; check-out timings</label>
+            <div class="btn-group btn-group-sm" role="group" aria-label="Check-in and check-out timings">
+              <button type="button" class="btn"
+                      [class.btn-primary]="stayTimeMode() === 'DEFAULT'"
+                      [class.btn-outline-primary]="stayTimeMode() !== 'DEFAULT'"
+                      (click)="useDefaultStayTimes()">
+                <i class="bi bi-clock-history me-1"></i>Use default (2:00 PM → 11:00 AM)
+              </button>
+              <button type="button" class="btn"
+                      [class.btn-primary]="stayTimeMode() === 'CUSTOM'"
+                      [class.btn-outline-primary]="stayTimeMode() !== 'CUSTOM'"
+                      (click)="useCustomStayTimes()">
+                <i class="bi bi-sliders me-1"></i>Set manually
+              </button>
+            </div>
+            <div class="form-text">
+              @if (stayTimeMode() === 'DEFAULT') {
+                Standard Indian hotel norms — guests check in from <strong>2:00 PM</strong> and check out by <strong>11:00 AM</strong>.
+              } @else {
+                Pick your own times below, or switch back to the standard timings.
+              }
+            </div>
+          </div>
           <div class="col-md-6">
             <label class="form-label">Check-in time</label>
-            <input type="time" class="form-control" formControlName="checkInTime" />
+            <input type="time" class="form-control" formControlName="checkInTime" (input)="onStayTimeEdited()" />
           </div>
           <div class="col-md-6">
             <label class="form-label">Check-out time</label>
-            <input type="time" class="form-control" formControlName="checkOutTime" />
+            <input type="time" class="form-control" formControlName="checkOutTime" (input)="onStayTimeEdited()" />
           </div>
           <div class="col-12">
             <label class="form-label">Amenities</label>
@@ -134,8 +159,8 @@
         <div class="row g-3">
           <div class="col-md-6">
             <label class="form-label">Status</label>
-            <select class="form-select" (change)="onStatusChange($event)">
-              @for (s of statuses; track s) { <option [value]="s" [selected]="selectedStatus() === s">{{ s | labelize }}</option> }
+            <select class="form-select" [seSelectValue]="selectedStatus()" (seSelectValueChange)="onStatusChange($event)">
+              @for (s of statuses; track s) { <option [value]="s">{{ s | labelize }}</option> }
             </select>
             <div class="form-text">Set to <strong>Listed</strong> to make it bookable by guests.</div>
           </div>

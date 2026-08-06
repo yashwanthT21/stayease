@@ -8,6 +8,7 @@ import { PREVENTIVE_FREQUENCIES, PREVENTIVE_STATUSES } from '../../core/models/e
 import { LabelizePipe } from '../../shared/pipes/labelize.pipe';
 import { OwnerPageHeaderComponent } from '../../shared/ui/owner-page-header';
 import { OwnerDialogComponent } from '../../shared/ui/owner-dialog';
+import { SelectValueDirective } from '../../shared/ui/select-value';
 
 /**
  * Preventive maintenance screen (Maintenance domain) — a bespoke, self-contained
@@ -23,7 +24,7 @@ import { OwnerDialogComponent } from '../../shared/ui/owner-dialog';
 @Component({
   selector: 'app-preventive-maintenance',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ReactiveFormsModule, LabelizePipe, OwnerPageHeaderComponent, OwnerDialogComponent],
+  imports: [ReactiveFormsModule, LabelizePipe, OwnerPageHeaderComponent, OwnerDialogComponent, SelectValueDirective],
   templateUrl: './preventive-maintenance.html',
 })
 export class PreventiveMaintenanceComponent {
@@ -110,19 +111,20 @@ export class PreventiveMaintenanceComponent {
   protected onSearch(event: Event): void {
     this.search.set((event.target as HTMLInputElement).value);
   }
-  protected onPropertyFilter(event: Event): void {
-    this.propertyFilter.set((event.target as HTMLSelectElement).value);
+  // Bound through SelectValueDirective so a pick survives the properties list
+  // resolving after the modal opened (see maintenance-issue for the same note).
+  protected onPropertyFilter(value: string): void {
+    this.propertyFilter.set(value);
   }
 
-  protected onProperty(event: Event): void {
-    const raw = (event.target as HTMLSelectElement).value;
-    this.selectedPropertyId.set(raw ? Number(raw) : null);
+  protected onProperty(value: string): void {
+    this.selectedPropertyId.set(value ? Number(value) : null);
   }
-  protected onFrequency(event: Event): void {
-    this.selectedFrequency.set((event.target as HTMLSelectElement).value);
+  protected onFrequency(value: string): void {
+    this.selectedFrequency.set(value);
   }
-  protected onStatus(event: Event): void {
-    this.selectedStatus.set((event.target as HTMLSelectElement).value);
+  protected onStatus(value: string): void {
+    this.selectedStatus.set(value);
   }
 
   protected openCreate(): void {

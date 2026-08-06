@@ -24,7 +24,7 @@ export const MAINTENANCE_ISSUE_RESOURCE: ResourceConfig = {
   ],
   fields: [
     { key: 'propertyId', label: 'Property', type: 'reference', ref: propertyRef, required: true },
-    { key: 'reportedById', label: 'Reported by (user id)', type: 'number', required: true, min: 1 },
+    { key: 'reportedById', label: 'Reported by', type: 'number', required: true, min: 1 },
     { key: 'reportedByType', label: 'Reporter type', type: 'select', options: REPORTED_BY_TYPES, required: true },
     { key: 'category', label: 'Category', type: 'select', options: MAINTENANCE_CATEGORIES, required: true },
     { key: 'description', label: 'Description', type: 'textarea' },

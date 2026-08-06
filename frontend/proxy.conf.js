@@ -22,7 +22,6 @@ const MONOLITH = 'http://localhost:8085'; // stayease-backend monolith
 module.exports = {
   '/api/properties': { target: GATEWAY, secure: false, changeOrigin: true },
   '/api/availability': { target: GATEWAY, secure: false, changeOrigin: true },
-  '/api/pricing-rules': { target: GATEWAY, secure: false, changeOrigin: true },
   '/api/notifications': { target: GATEWAY, secure: false, changeOrigin: true },
   '/api/auth': { target: GATEWAY, secure: false, changeOrigin: true },
   '/api': { target: MONOLITH, secure: false, changeOrigin: true },

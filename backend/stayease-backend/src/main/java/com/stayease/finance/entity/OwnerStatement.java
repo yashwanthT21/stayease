@@ -49,4 +49,14 @@ public class OwnerStatement {
     @Column(nullable = false, length = 20)
     private StatementStatus status;
 
+    /**
+     * The owner's comment on their approve/reject decision. Mainly carries a
+     * rejection reason, so Finance knows what to change before re-issuing.
+     */
+    @Column(length = 500)
+    private String ownerNote;
+
+    /** When the owner approved or rejected. Null until they've answered. */
+    private LocalDateTime decidedDate;
+
 }

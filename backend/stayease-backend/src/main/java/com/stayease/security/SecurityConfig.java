@@ -63,6 +63,22 @@ public class SecurityConfig {
                         // managers (and admins) may read the housekeeper list to assign a turnover
                         .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/users/housekeepers")
                         .hasAnyRole("PROPERTY_MANAGER", "ADMIN")
+                        // finance (and admins) may read the owner list, to pick whose
+                        // statement they're building rather than key in a user id
+                        .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/users/owners")
+                        .hasAnyRole("FINANCE", "ADMIN")
+                        // read-only people picker: owners/managers name a person on
+                        // their own records (e.g. who reported a maintenance issue)
+                        // instead of typing a raw user id
+                        .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/users/directory")
+                        .hasAnyRole("OWNER", "PROPERTY_MANAGER", "ADMIN")
+                        // name+role label lookup for a single id. Any signed-in
+                        // caller, because it exposes strictly less than the
+                        // directory above and other services need it (over Feign,
+                        // forwarding the end user's token) to name a person in a
+                        // notification.
+                        .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/users/*/summary")
+                        .authenticated()
                         // all other user management: admins only
                         .requestMatchers("/api/users/**").hasRole("ADMIN")
                         // audit trail: admins & finance
@@ -74,6 +90,14 @@ public class SecurityConfig {
                         .requestMatchers(org.springframework.http.HttpMethod.GET,
                                 "/api/owner-statements/**", "/api/owner-payouts/**")
                         .hasAnyRole("ADMIN", "FINANCE", "OWNER")
+                        // An owner signs off their OWN statement: approving is what
+                        // releases the payout, and rejecting sends it back to
+                        // Finance, so these two writes belong to the owner rather
+                        // than to the people who produced the figures. The service
+                        // still checks the statement is theirs and is ISSUED.
+                        .requestMatchers(org.springframework.http.HttpMethod.PATCH,
+                                "/api/owner-statements/*/approve", "/api/owner-statements/*/reject")
+                        .hasAnyRole("OWNER", "ADMIN")
                         .requestMatchers("/api/owner-statements/**", "/api/owner-payouts/**")
                         .hasAnyRole("ADMIN", "FINANCE")
                         // everything else: any authenticated user

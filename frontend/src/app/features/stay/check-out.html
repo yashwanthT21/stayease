@@ -1,4 +1,4 @@
-<app-owner-page-header icon="bi-box-arrow-right" title="Check-outs" subtitle="Record departures, damage notes and deposit release.">
+<app-owner-page-header icon="bi-box-arrow-right" title="Check-outs" subtitle="Record departures and any damage found at the end of a stay.">
   <button headerActions class="btn btn-primary btn-sm" (click)="openCreate()"><i class="bi bi-plus-lg me-1"></i>New check-out</button>
 </app-owner-page-header>
 
@@ -18,16 +18,15 @@
           <th>Reservation</th>
           <th>Actual check-out</th>
           <th class="text-center">Damage noted</th>
-          <th class="text-center">Deposit released</th>
           <th>Status</th>
           <th class="text-end">Actions</th>
         </tr>
       </thead>
       <tbody>
         @if (loading()) {
-          <tr><td colspan="7" class="text-center text-muted py-4"><div class="spinner-border spinner-border-sm text-primary me-2"></div>Loading…</td></tr>
+          <tr><td colspan="6" class="text-center text-muted py-4"><div class="spinner-border spinner-border-sm text-primary me-2"></div>Loading…</td></tr>
         } @else if (filtered().length === 0) {
-          <tr><td colspan="7" class="text-center text-muted py-5"><i class="bi bi-inbox fs-3 d-block mb-2"></i>No check-outs recorded yet.</td></tr>
+          <tr><td colspan="6" class="text-center text-muted py-5"><i class="bi bi-inbox fs-3 d-block mb-2"></i>No check-outs recorded yet.</td></tr>
         } @else {
           @for (c of filtered(); track c.id) {
             <tr>
@@ -46,13 +45,6 @@
                   <span class="badge rounded-pill bg-danger-subtle text-danger-emphasis"><i class="bi bi-exclamation-triangle-fill me-1"></i>Damage</span>
                 } @else {
                   <span class="badge rounded-pill bg-secondary-subtle text-secondary-emphasis">None</span>
-                }
-              </td>
-              <td class="text-center">
-                @if (c.depositReleased) {
-                  <span class="badge rounded-pill bg-success-subtle text-success-emphasis"><i class="bi bi-check-lg me-1"></i>Released</span>
-                } @else {
-                  <span class="badge rounded-pill bg-secondary-subtle text-secondary-emphasis">Held</span>
                 }
               </td>
               <td><span class="badge {{ statusBadge(c.status) }}">{{ c.status | labelize }}</span></td>
@@ -76,10 +68,11 @@
         <div class="row g-3">
           <div class="col-md-6">
             <label class="form-label">Reservation <span class="text-danger">*</span></label>
-            <select class="form-select" [class.is-invalid]="reservationMissing()" (change)="onReservationChange($event)">
-              <option value="" [selected]="selectedReservationId() === null">— Select a reservation —</option>
+            <select class="form-select" [class.is-invalid]="reservationMissing()"
+                    [seSelectValue]="selectedReservationId() ?? ''" (seSelectValueChange)="onReservationChange($event)">
+              <option value="">— Select a reservation —</option>
               @for (r of reservations(); track r.id) {
-                <option [value]="r.id" [selected]="selectedReservationId() === r.id">{{ guestName(r.guestId) }} · {{ propertyTitle(r.propertyId) }} · {{ r.checkInDate | date: 'MMM d' }} → {{ r.checkOutDate | date: 'MMM d, y' }} · {{ r.nights }} night{{ r.nights === 1 ? '' : 's' }}</option>
+                <option [value]="r.id">{{ guestName(r.guestId) }} · {{ propertyTitle(r.propertyId) }} · {{ r.checkInDate | date: 'MMM d' }} → {{ r.checkOutDate | date: 'MMM d, y' }} · {{ r.nights }} night{{ r.nights === 1 ? '' : 's' }}</option>
               }
             </select>
             <div class="invalid-feedback">A reservation is required.</div>
@@ -91,8 +84,8 @@
           </div>
           <div class="col-md-6">
             <label class="form-label">Status</label>
-            <select class="form-select" (change)="onStatusChange($event)">
-              @for (s of statuses; track s) { <option [value]="s" [selected]="selectedStatus() === s">{{ s | labelize }}</option> }
+            <select class="form-select" [seSelectValue]="selectedStatus()" (seSelectValueChange)="onStatusChange($event)">
+              @for (s of statuses; track s) { <option [value]="s">{{ s | labelize }}</option> }
             </select>
             <div class="form-text">Defaults to Checked Out.</div>
           </div>
@@ -100,10 +93,6 @@
             <div class="form-check mb-2">
               <input type="checkbox" class="form-check-input" id="damageNoted" formControlName="damageNoted" />
               <label class="form-check-label" for="damageNoted">Damage noted</label>
-            </div>
-            <div class="form-check mb-2">
-              <input type="checkbox" class="form-check-input" id="depositReleased" formControlName="depositReleased" />
-              <label class="form-check-label" for="depositReleased">Deposit released</label>
             </div>
           </div>
           <div class="col-12">

@@ -4,18 +4,24 @@ import { CrudService } from '../../core/services/crud.service';
 import { AuthService } from '../../core/auth/auth.service';
 import { ToastService } from '../../core/services/toast.service';
 import { GuestProfileResponse } from '../../core/models/dtos';
-import { LabelizePipe } from '../../shared/pipes/labelize.pipe';
+import { isVerified, verificationLabel } from '../../core/models/verification';
 
 /**
  * Lets a guest create/edit their own guest profile (name, email, phone,
- * nationality). Verification, status, review score and booking count are
- * server-managed and shown read-only. The profile is looked up by the
- * signed-in user's id; a first save creates it, later saves update it.
+ * nationality). The profile is looked up by the signed-in user's id; a first save
+ * creates it, later saves update it.
+ *
+ * Account standing shows ONE thing: verification, as the plain
+ * Verified/Unverified answer a guest can act on — the same wording the manager's
+ * Guests table uses — rather than leaking the internal ID_VERIFIED / TRUSTED
+ * tiers. Review score and booking count used to sit alongside it and were
+ * removed: a guest can't do anything about either, so they were decoration on a
+ * card whose job is to tell them whether they still need verifying.
  */
 @Component({
   selector: 'app-guest-profile',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ReactiveFormsModule, LabelizePipe],
+  imports: [ReactiveFormsModule],
   templateUrl: './guest-profile.html',
 })
 export class GuestProfileComponent {
@@ -89,13 +95,6 @@ export class GuestProfileComponent {
     return !!c && c.invalid && (c.dirty || c.touched);
   }
 
-  protected verificationBadge(status: string | undefined): string {
-    switch (status) {
-      case 'TRUSTED':
-      case 'ID_VERIFIED':
-        return 'text-bg-success';
-      default:
-        return 'text-bg-secondary';
-    }
-  }
+  protected readonly isVerified = isVerified;
+  protected readonly verificationLabel = verificationLabel;
 }

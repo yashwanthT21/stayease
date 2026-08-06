@@ -2,6 +2,7 @@ package com.stayease.iam.service;
 
 import com.stayease.iam.dto.UserRequest;
 import com.stayease.iam.dto.UserResponse;
+import com.stayease.iam.dto.UserSummaryResponse;
 
 import java.util.List;
 
@@ -18,10 +19,26 @@ public interface UserService {
     /** Users with the PROPERTY_MANAGER role, for the owner's assignment picker. */
     List<UserResponse> getManagers();
 
+    /** Users with the OWNER role, for Finance's statement-builder picker. */
+    List<UserResponse> getOwners();
+
     /** Users with the HOUSEKEEPING role, for the manager's turnover assignment picker. */
     List<UserResponse> getHousekeepers();
 
+    /**
+     * Users with the FINANCE role. Used to notify "Finance" about something that
+     * needs their attention — it's a role, not one named person, so whoever holds
+     * it gets told.
+     */
+    List<UserResponse> getFinanceUsers();
+
     UserResponse getById(Long id);
+
+    /**
+     * Name-and-role only, for callers that just need to LABEL a user — including
+     * other services (property-service naming an owner in a notification).
+     */
+    UserSummaryResponse getSummaryById(Long id);
 
     UserResponse update(Long id, UserRequest request);
 

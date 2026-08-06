@@ -61,8 +61,8 @@
         </dependency>
 
         <!-- Service discovery + client-side load balancing, so this app can call
-             the extracted property-service via http://property-service (resolved
-             through Eureka) instead of an in-process PropertyService bean. -->
+             the extracted property-service by its service NAME (resolved through
+             Eureka) instead of an in-process PropertyService bean. -->
         <dependency>
             <groupId>org.springframework.cloud</groupId>
             <artifactId>spring-cloud-starter-netflix-eureka-client</artifactId>
@@ -70,6 +70,15 @@
         <dependency>
             <groupId>org.springframework.cloud</groupId>
             <artifactId>spring-cloud-starter-loadbalancer</artifactId>
+        </dependency>
+
+        <!-- Declarative REST clients. Every outbound inter-service call is a
+             @FeignClient interface: the HTTP verb, path and body live in the
+             signature, and Feign + LoadBalancer resolve the service name from
+             Eureka. Replaces the hand-rolled RestClient plumbing. -->
+        <dependency>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-starter-openfeign</artifactId>
         </dependency>
 
         <!-- Security: authentication, authorization (RBAC), password hashing -->

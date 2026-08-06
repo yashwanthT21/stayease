@@ -8,7 +8,8 @@
       <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
       <input type="text" class="form-control" placeholder="Search task, property, status…" (input)="onSearch($event)" />
     </div>
-    <select class="form-select form-select-sm" style="max-width: 220px" (change)="onPropertyFilter($event)">
+    <select class="form-select form-select-sm" style="max-width: 220px"
+            [seSelectValue]="propertyFilter()" (seSelectValueChange)="onPropertyFilter($event)">
       <option value="">All properties</option>
       @for (p of properties(); track p.id) {
         <option [value]="p.id">{{ p.title }}</option>
@@ -65,10 +66,11 @@
         <div class="row g-3">
           <div class="col-md-6">
             <label class="form-label">Property <span class="text-danger">*</span></label>
-            <select class="form-select" [class.is-invalid]="propertyMissing()" (change)="onProperty($event)">
-              <option value="" [selected]="selectedPropertyId() === null">— Select a property —</option>
+            <select class="form-select" [class.is-invalid]="propertyMissing()"
+                    [seSelectValue]="selectedPropertyId() ?? ''" (seSelectValueChange)="onProperty($event)">
+              <option value="">— Select a property —</option>
               @for (p of properties(); track p.id) {
-                <option [value]="p.id" [selected]="selectedPropertyId() === p.id">{{ p.title }} · {{ p.city }}</option>
+                <option [value]="p.id">{{ p.title }} · {{ p.city }}</option>
               }
             </select>
             <div class="invalid-feedback">A property is required.</div>
@@ -81,17 +83,17 @@
           </div>
           <div class="col-md-6">
             <label class="form-label">Frequency <span class="text-danger">*</span></label>
-            <select class="form-select" (change)="onFrequency($event)">
+            <select class="form-select" [seSelectValue]="selectedFrequency()" (seSelectValueChange)="onFrequency($event)">
               @for (f of frequencies; track f) {
-                <option [value]="f" [selected]="selectedFrequency() === f">{{ f | labelize }}</option>
+                <option [value]="f">{{ f | labelize }}</option>
               }
             </select>
           </div>
           <div class="col-md-6">
             <label class="form-label">Status</label>
-            <select class="form-select" (change)="onStatus($event)">
+            <select class="form-select" [seSelectValue]="selectedStatus()" (seSelectValueChange)="onStatus($event)">
               @for (s of statuses; track s) {
-                <option [value]="s" [selected]="selectedStatus() === s">{{ s | labelize }}</option>
+                <option [value]="s">{{ s | labelize }}</option>
               }
             </select>
             <div class="form-text">Defaults to Scheduled.</div>

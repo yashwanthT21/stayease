@@ -10,6 +10,7 @@ import { ACCESS_METHODS, CHECK_IN_STATUSES } from '../../core/models/enums';
 import { LabelizePipe } from '../../shared/pipes/labelize.pipe';
 import { OwnerPageHeaderComponent } from '../../shared/ui/owner-page-header';
 import { OwnerDialogComponent } from '../../shared/ui/owner-dialog';
+import { SelectValueDirective } from '../../shared/ui/select-value';
 
 /**
  * Check-in screen (Stay domain) — a bespoke, self-contained CRUD screen for
@@ -18,6 +19,10 @@ import { OwnerDialogComponent } from '../../shared/ui/owner-dialog';
  * modal form; the reservation and guest are chosen from dropdowns loaded from
  * their own endpoints so an operator never types a raw id.
  *
+ * Choosing a reservation auto-fills the guest, since a reservation already names
+ * exactly one guest — the picker is left editable only so an operator can correct
+ * a mis-linked record.
+ *
  * The generic engine could render this from `check-in.resource.ts`; it is
  * hand-written here so the Stay module owns an explicit, walk-through component
  * per screen — the same shape as `review-analytics`.
@@ -25,7 +30,7 @@ import { OwnerDialogComponent } from '../../shared/ui/owner-dialog';
 @Component({
   selector: 'app-check-in',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ReactiveFormsModule, DatePipe, LabelizePipe, OwnerPageHeaderComponent, OwnerDialogComponent],
+  imports: [ReactiveFormsModule, DatePipe, LabelizePipe, OwnerPageHeaderComponent, OwnerDialogComponent, SelectValueDirective],
   templateUrl: './check-in.html',
 })
 export class CheckInComponent {
@@ -58,17 +63,15 @@ export class CheckInComponent {
   protected readonly editingId = signal<number | null>(null);
   protected readonly deleteTarget = signal<CheckInRecordResponse | null>(null);
 
-  // Reservation / guest are required references. Like the property manager's
-  // manager picker, they are kept as signals (not reactive controls) so the
-  // async-populated <select> captures the first choice reliably in this zoneless
-  // app. `attempted` reveals their validation message only after a submit try.
+  // Every <select> on this screen is signal-backed rather than a reactive
+  // control, and the template binds them through SelectValueDirective — which is
+  // what guarantees a chosen value survives the option lists resolving and never
+  // silently falls back to the default. `attempted` reveals the required-field
+  // messages only after a submit try.
   protected readonly selectedReservationId = signal<number | null>(null);
   protected readonly selectedGuestId = signal<number | null>(null);
   protected readonly attempted = signal(false);
 
-  // Access method & status are native <select>s too. Same zoneless reason as the
-  // reference pickers above: driven by signals + (change), not formControlName,
-  // so the first choice registers reliably instead of keeping the default.
   protected readonly selectedAccessMethod = signal<string>('');
   protected readonly selectedStatus = signal<string>('PENDING');
 
@@ -166,22 +169,28 @@ export class CheckInComponent {
     this.search.set((event.target as HTMLInputElement).value);
   }
 
-  protected onReservationChange(event: Event): void {
-    const raw = (event.target as HTMLSelectElement).value;
-    this.selectedReservationId.set(raw ? Number(raw) : null);
+  /**
+   * A reservation belongs to exactly one guest, so picking the reservation fills
+   * the guest in for the operator instead of making them re-derive it. Clearing
+   * the reservation clears the guest too, so the pair can't drift out of step.
+   */
+  protected onReservationChange(value: string): void {
+    const id = value ? Number(value) : null;
+    this.selectedReservationId.set(id);
+    const reservation = id == null ? null : this.reservations().find((r) => r.id === id);
+    this.selectedGuestId.set(reservation?.guestId ?? null);
   }
 
-  protected onGuestChange(event: Event): void {
-    const raw = (event.target as HTMLSelectElement).value;
-    this.selectedGuestId.set(raw ? Number(raw) : null);
+  protected onGuestChange(value: string): void {
+    this.selectedGuestId.set(value ? Number(value) : null);
   }
 
-  protected onAccessMethodChange(event: Event): void {
-    this.selectedAccessMethod.set((event.target as HTMLSelectElement).value);
+  protected onAccessMethodChange(value: string): void {
+    this.selectedAccessMethod.set(value);
   }
 
-  protected onStatusChange(event: Event): void {
-    this.selectedStatus.set((event.target as HTMLSelectElement).value);
+  protected onStatusChange(value: string): void {
+    this.selectedStatus.set(value);
   }
 
   protected openCreate(): void {

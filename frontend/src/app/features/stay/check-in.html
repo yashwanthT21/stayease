@@ -65,10 +65,11 @@
         <div class="row g-3">
           <div class="col-md-6">
             <label class="form-label">Reservation <span class="text-danger">*</span></label>
-            <select class="form-select" [class.is-invalid]="reservationMissing()" (change)="onReservationChange($event)">
-              <option value="" [selected]="selectedReservationId() === null">— Select a reservation —</option>
+            <select class="form-select" [class.is-invalid]="reservationMissing()"
+                    [seSelectValue]="selectedReservationId() ?? ''" (seSelectValueChange)="onReservationChange($event)">
+              <option value="">— Select a reservation —</option>
               @for (r of reservations(); track r.id) {
-                <option [value]="r.id" [selected]="selectedReservationId() === r.id">{{ guestLabel(r.guestId) }} · {{ propertyTitle(r.propertyId) }} · {{ r.checkInDate | date: 'MMM d' }} → {{ r.checkOutDate | date: 'MMM d, y' }} · {{ r.nights }} night{{ r.nights === 1 ? '' : 's' }}</option>
+                <option [value]="r.id">{{ guestLabel(r.guestId) }} · {{ propertyTitle(r.propertyId) }} · {{ r.checkInDate | date: 'MMM d' }} → {{ r.checkOutDate | date: 'MMM d, y' }} · {{ r.nights }} night{{ r.nights === 1 ? '' : 's' }}</option>
               }
             </select>
             <div class="invalid-feedback">A reservation is required.</div>
@@ -76,14 +77,19 @@
           </div>
           <div class="col-md-6">
             <label class="form-label">Guest <span class="text-danger">*</span></label>
-            <select class="form-select" [class.is-invalid]="guestMissing()" (change)="onGuestChange($event)">
-              <option value="" [selected]="selectedGuestId() === null">— Select a guest —</option>
+            <select class="form-select" [class.is-invalid]="guestMissing()"
+                    [seSelectValue]="selectedGuestId() ?? ''" (seSelectValueChange)="onGuestChange($event)">
+              <option value="">— Select a guest —</option>
               @for (g of guests(); track g.id) {
-                <option [value]="g.id" [selected]="selectedGuestId() === g.id">{{ g.name }}</option>
+                <option [value]="g.id">{{ g.name }}</option>
               }
             </select>
             <div class="invalid-feedback">A guest is required.</div>
-            @if (guests().length === 0) { <div class="form-text">No guests available.</div> }
+            @if (guests().length === 0) {
+              <div class="form-text">No guests available.</div>
+            } @else {
+              <div class="form-text"><i class="bi bi-magic me-1"></i>Filled in from the chosen reservation.</div>
+            }
           </div>
           <div class="col-md-6">
             <label class="form-label">Actual check-in</label>
@@ -91,15 +97,15 @@
           </div>
           <div class="col-md-6">
             <label class="form-label">Access method</label>
-            <select class="form-select" (change)="onAccessMethodChange($event)">
-              <option value="" [selected]="selectedAccessMethod() === ''">— None —</option>
-              @for (a of accessMethods; track a) { <option [value]="a" [selected]="selectedAccessMethod() === a">{{ a | labelize }}</option> }
+            <select class="form-select" [seSelectValue]="selectedAccessMethod()" (seSelectValueChange)="onAccessMethodChange($event)">
+              <option value="">— None —</option>
+              @for (a of accessMethods; track a) { <option [value]="a">{{ a | labelize }}</option> }
             </select>
           </div>
           <div class="col-md-6">
             <label class="form-label">Status</label>
-            <select class="form-select" (change)="onStatusChange($event)">
-              @for (s of statuses; track s) { <option [value]="s" [selected]="selectedStatus() === s">{{ s | labelize }}</option> }
+            <select class="form-select" [seSelectValue]="selectedStatus()" (seSelectValueChange)="onStatusChange($event)">
+              @for (s of statuses; track s) { <option [value]="s">{{ s | labelize }}</option> }
             </select>
             <div class="form-text">Defaults to Pending.</div>
           </div>

@@ -39,6 +39,14 @@ export class CrudService {
     return this.http.patch<T>(fullPath, {});
   }
 
+  /**
+   * A PATCH that carries a body — for transitions that need a reason rather than
+   * just a flip, e.g. an owner rejecting a statement with an explanation.
+   */
+  patchBody<T extends HasId>(fullPath: string, body: unknown): Observable<T> {
+    return this.http.patch<T>(fullPath, body);
+  }
+
   private toParams(params?: QueryParams): HttpParams {
     let p = new HttpParams();
     if (params) {

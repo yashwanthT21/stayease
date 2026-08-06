@@ -6,16 +6,21 @@ import { CrudService } from '../../core/services/crud.service';
 import { ToastService } from '../../core/services/toast.service';
 import { AuthService } from '../../core/auth/auth.service';
 import { CheckOutRecordResponse, GuestProfileResponse, PropertyResponse, ReservationResponse } from '../../core/models/dtos';
-import { CHECK_OUT_STATUSES } from '../../core/models/enums';
+import { CHECK_OUT_STATUS_OPTIONS } from '../../core/models/enums';
 import { LabelizePipe } from '../../shared/pipes/labelize.pipe';
 import { OwnerPageHeaderComponent } from '../../shared/ui/owner-page-header';
 import { OwnerDialogComponent } from '../../shared/ui/owner-dialog';
+import { SelectValueDirective } from '../../shared/ui/select-value';
 
 /**
  * Check-out screen (Stay domain) — a bespoke, self-contained CRUD screen for
  * /api/check-outs that mirrors the backend `stay` module's CheckOutRecord. It
  * lists every check-out record and creates / edits / deletes them through a
  * modal form, with the reservation chosen from a loaded dropdown.
+ *
+ * Deposit release is deliberately not surfaced here: releasing a deposit is a
+ * finance action, not part of recording a departure, so the field is left to the
+ * backend's default rather than offered as a checkbox an operator must guess at.
  *
  * The generic engine could render this from `check-out.resource.ts`; it is
  * hand-written here so the Stay module owns an explicit, walk-through component
@@ -24,7 +29,7 @@ import { OwnerDialogComponent } from '../../shared/ui/owner-dialog';
 @Component({
   selector: 'app-check-out',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ReactiveFormsModule, DatePipe, LabelizePipe, OwnerPageHeaderComponent, OwnerDialogComponent],
+  imports: [ReactiveFormsModule, DatePipe, LabelizePipe, OwnerPageHeaderComponent, OwnerDialogComponent, SelectValueDirective],
   templateUrl: './check-out.html',
 })
 export class CheckOutComponent {
@@ -39,7 +44,9 @@ export class CheckOutComponent {
   // the reservation picker are limited to these (null = no scoping).
   private readonly scopeResIds = signal<Set<number> | null>(null);
 
-  protected readonly statuses = CHECK_OUT_STATUSES;
+  // Only CHECKED_OUT is offered — damage is recorded by the "Damage noted" flag
+  // below, not by a competing status value. See CHECK_OUT_STATUS_OPTIONS.
+  protected readonly statuses = CHECK_OUT_STATUS_OPTIONS;
 
   protected readonly loading = signal(true);
   protected readonly saving = signal(false);
@@ -57,14 +64,19 @@ export class CheckOutComponent {
   protected readonly editingId = signal<number | null>(null);
   protected readonly deleteTarget = signal<CheckOutRecordResponse | null>(null);
 
-  // Reservation is a required reference — kept as a signal (see CheckInComponent
-  // for why the async picker isn't a reactive control in this zoneless app).
+  // Reservation and status are signal-backed selects bound through
+  // SelectValueDirective (see CheckInComponent) — that's what keeps a chosen
+  // value from reverting to the default once the reservation list resolves.
   protected readonly selectedReservationId = signal<number | null>(null);
   protected readonly attempted = signal(false);
-
-  // Status is a native <select> too — signal + (change) rather than
-  // formControlName so the first choice registers reliably in this zoneless app.
   protected readonly selectedStatus = signal<string>('CHECKED_OUT');
+
+  /**
+   * Deposit release isn't editable on this screen (it's a finance concern), but
+   * a PUT replaces the whole record — so we carry the stored value through an
+   * edit instead of letting it silently reset to false.
+   */
+  private readonly depositReleased = signal(false);
 
   protected form: FormGroup = this.buildForm();
 
@@ -159,7 +171,6 @@ export class CheckOutComponent {
       actualCheckOut: [row?.actualCheckOut ? String(row.actualCheckOut).slice(0, 16) : ''],
       damageNoted: [row?.damageNoted ?? false],
       damageDescription: [row?.damageDescription ?? ''],
-      depositReleased: [row?.depositReleased ?? false],
     });
   }
 
@@ -167,13 +178,12 @@ export class CheckOutComponent {
     this.search.set((event.target as HTMLInputElement).value);
   }
 
-  protected onReservationChange(event: Event): void {
-    const raw = (event.target as HTMLSelectElement).value;
-    this.selectedReservationId.set(raw ? Number(raw) : null);
+  protected onReservationChange(value: string): void {
+    this.selectedReservationId.set(value ? Number(value) : null);
   }
 
-  protected onStatusChange(event: Event): void {
-    this.selectedStatus.set((event.target as HTMLSelectElement).value);
+  protected onStatusChange(value: string): void {
+    this.selectedStatus.set(value);
   }
 
   protected openCreate(): void {
@@ -181,6 +191,7 @@ export class CheckOutComponent {
     this.attempted.set(false);
     this.selectedReservationId.set(null);
     this.selectedStatus.set('CHECKED_OUT');
+    this.depositReleased.set(false);
     this.form = this.buildForm();
     this.modalOpen.set(true);
   }
@@ -190,6 +201,7 @@ export class CheckOutComponent {
     this.attempted.set(false);
     this.selectedReservationId.set(row.reservationId ?? null);
     this.selectedStatus.set(row.status);
+    this.depositReleased.set(!!row.depositReleased);
     this.form = this.buildForm(row);
     this.modalOpen.set(true);
   }
@@ -213,7 +225,7 @@ export class CheckOutComponent {
     const raw = this.form.getRawValue() as Record<string, unknown>;
     const payload: Record<string, unknown> = { reservationId };
     for (const [key, value] of Object.entries(raw)) {
-      if (key === 'damageNoted' || key === 'depositReleased') {
+      if (key === 'damageNoted') {
         payload[key] = !!value;
         continue;
       }
@@ -223,6 +235,8 @@ export class CheckOutComponent {
       payload[key] = value;
     }
     payload['status'] = this.selectedStatus(); // signal-backed select
+    // Not editable here — carried through so a PUT can't reset it (see above).
+    payload['depositReleased'] = this.depositReleased();
 
     this.saving.set(true);
     const id = this.editingId();

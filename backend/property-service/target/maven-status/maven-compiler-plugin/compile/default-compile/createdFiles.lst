@@ -1,10 +1,7 @@
-com\stayease\property\config\RestClientConfig.class
 com\stayease\property\mapper\PropertyMapper.class
 com\stayease\property\enums\AvailabilityStatus.class
 com\stayease\property\controller\PropertyController.class
-com\stayease\property\dto\PricingRuleRequest.class
 com\stayease\property\entity\AvailabilityCalendar.class
-com\stayease\property\service\PricingRuleService.class
 com\stayease\property\enums\PricingRuleStatus.class
 com\stayease\property\client\NotificationCreateRequest.class
 com\stayease\property\entity\PricingRule.class
@@ -25,14 +22,10 @@ com\stayease\property\repository\PropertyRepository.class
 com\stayease\property\enums\AdjustmentType.class
 com\stayease\property\client\NotificationClient.class
 com\stayease\common\exception\ResourceNotFoundException.class
-com\stayease\property\controller\PricingRuleController.class
-com\stayease\property\dto\PricingRuleResponse.class
 com\stayease\property\repository\PricingRuleRepository.class
 com\stayease\property\dto\PropertyResponse.class
 com\stayease\property\service\PropertyService.class
 com\stayease\property\dto\AvailabilityCalendarResponse.class
-com\stayease\property\mapper\PricingRuleMapper.class
-com\stayease\property\service\PricingRuleServiceImpl.class
 com\stayease\property\enums\PricingRuleType.class
 com\stayease\property\PropertyServiceApplication.class
 com\stayease\common\exception\DuplicateResourceException.class

@@ -8,10 +8,13 @@ import {
   OwnerStatementResponse,
   PropertyResponse,
   ReservationResponse,
+  UserResponse,
 } from '../../core/models/dtos';
-import { STATEMENT_STATUSES } from '../../core/models/enums';
+import { STATEMENT_STATUS_OPTIONS } from '../../core/models/enums';
 import { LabelizePipe } from '../../shared/pipes/labelize.pipe';
+import { formatRupees } from '../../shared/money';
 import { OwnerDialogComponent } from '../../shared/ui/owner-dialog';
+import { SelectValueDirective } from '../../shared/ui/select-value';
 
 /**
  * Finance → Owner Statements. Lists issued statements and generates new ones.
@@ -28,18 +31,28 @@ import { OwnerDialogComponent } from '../../shared/ui/owner-dialog';
  *   - Platform fee      = grossRevenue × platformFeePct%  (entered as a %).
  *   - Management fee    = entered directly as a flat amount.
  * The backend still owns the netPayout arithmetic; we only POST the components.
+ *
+ * The owner is CHOSEN from a list rather than keyed in as a user id: a mistyped id
+ * silently posts a whole month's money against the wrong person, and Finance has
+ * no way to spot it from a bare number.
+ *
+ * A statement's APPROVED/REJECTED states belong to the owner, not to Finance, so
+ * they aren't offered in the status dropdown here — see STATEMENT_STATUS_OPTIONS.
  */
 @Component({
   selector: 'app-statement-builder',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [LabelizePipe, OwnerDialogComponent],
+  imports: [LabelizePipe, OwnerDialogComponent, SelectValueDirective],
   templateUrl: './statement-builder.html',
 })
 export class StatementBuilderComponent {
   private crud = inject(CrudService);
   private toast = inject(ToastService);
 
-  protected readonly statuses = STATEMENT_STATUSES;
+  protected readonly statuses = STATEMENT_STATUS_OPTIONS;
+
+  /** OWNER users, for the picker. Empty (e.g. 403) falls back to a number input. */
+  protected readonly owners = signal<UserResponse[]>([]);
 
   protected readonly loading = signal(true);
   protected readonly saving = signal(false);
@@ -113,6 +126,26 @@ export class StatementBuilderComponent {
       },
       error: () => this.loading.set(false),
     });
+    // Separate call, and deliberately non-fatal: if the owner list can't be read
+    // the builder still works, it just falls back to typing the id.
+    this.crud.list<UserResponse>('/api/users/owners').subscribe({
+      next: (rows) => this.owners.set(rows),
+      error: () => this.owners.set([]),
+    });
+  }
+
+  /** "Ada Owner (ada@example.com)" — enough to tell two same-named owners apart. */
+  protected ownerLabel(owner: UserResponse): string {
+    return owner.email ? `${owner.name} (${owner.email})` : owner.name;
+  }
+
+  /** The chosen owner's name, for the statement list and the confirm step. */
+  protected ownerName(ownerId: number | null | undefined): string {
+    if (ownerId == null) {
+      return '—';
+    }
+    const owner = this.owners().find((o) => o.id === ownerId);
+    return owner ? owner.name : `#${ownerId}`;
   }
 
   // ---------------- builder modal ----------------
@@ -143,10 +176,14 @@ export class StatementBuilderComponent {
   // Owner/period changes invalidate any prior calculation (they change the
   // record set); rate inputs only feed the reactive computed fields, so they
   // don't require a re-fetch.
-  protected onOwnerId(e: Event): void {
-    const v = (e.target as HTMLInputElement).value;
-    this.ownerId.set(v ? Number(v) : null);
+  /** From the picker (or the id fallback input) — both hand over a string. */
+  protected onOwnerId(value: string): void {
+    this.ownerId.set(value ? Number(value) : null);
     this.resetCalc();
+  }
+
+  protected onOwnerIdInput(e: Event): void {
+    this.onOwnerId((e.target as HTMLInputElement).value);
   }
   protected onPeriod(e: Event): void {
     this.period.set((e.target as HTMLInputElement).value);
@@ -161,8 +198,8 @@ export class StatementBuilderComponent {
   protected onManagementFee(e: Event): void {
     this.managementFee.set(toNumber((e.target as HTMLInputElement).value));
   }
-  protected onStatus(e: Event): void {
-    this.status.set((e.target as HTMLSelectElement).value);
+  protected onStatus(value: string): void {
+    this.status.set(value);
   }
 
   /** Fetch the owner's properties → reservations + maintenance, and total them up. */
@@ -276,7 +313,42 @@ export class StatementBuilderComponent {
     this.editManagement.set(Number(row.managementFee ?? 0));
     this.editCleaning.set(Number(row.cleaningRevenue ?? 0));
     this.editMaintenance.set(Number(row.maintenanceCost ?? 0));
-    this.editStatus.set(row.status);
+    // APPROVED / REJECTED aren't Finance's to set, so they're not in the dropdown.
+    // Opening a decided statement therefore lands on ISSUED — which is exactly the
+    // re-issue action: saving puts the corrected figures back to the owner and
+    // clears their old answer (see the backend's OwnerStatementMapper).
+    this.editStatus.set(this.isDecided(row) ? 'ISSUED' : row.status);
+  }
+
+  /** The owner has already answered this statement (approved or rejected). */
+  protected isDecided(row: OwnerStatementResponse): boolean {
+    return row.status === 'APPROVED' || row.status === 'REJECTED';
+  }
+
+  /** An owner rejected it — Finance needs to correct and re-issue. */
+  protected isRejected(row: OwnerStatementResponse): boolean {
+    return row.status === 'REJECTED';
+  }
+
+  /** Payout is unlocked only once the owner has approved. */
+  protected isPayable(row: OwnerStatementResponse): boolean {
+    return row.status === 'APPROVED';
+  }
+
+  /** Plain-English answer to "can I pay this yet?", shown in the list. */
+  protected payoutHint(row: OwnerStatementResponse): string {
+    switch (row.status) {
+      case 'APPROVED':
+        return 'Owner approved — payout can be released.';
+      case 'REJECTED':
+        return 'Owner rejected — correct the figures and re-issue.';
+      case 'ISSUED':
+        return 'Waiting on the owner to approve.';
+      case 'PAID':
+        return 'Payout already released.';
+      default:
+        return 'Draft — issue it to send it to the owner.';
+    }
   }
 
   protected closeEdit(): void {
@@ -298,8 +370,8 @@ export class StatementBuilderComponent {
   protected onEditMaintenance(e: Event): void {
     this.editMaintenance.set(toNumber((e.target as HTMLInputElement).value));
   }
-  protected onEditStatus(e: Event): void {
-    this.editStatus.set((e.target as HTMLSelectElement).value);
+  protected onEditStatus(value: string): void {
+    this.editStatus.set(value);
   }
 
   protected saveEdit(): void {
@@ -354,14 +426,16 @@ export class StatementBuilderComponent {
 
   // ---------------- display helpers ----------------
   protected money(value: unknown): string {
-    const n = Number(value);
-    return Number.isFinite(n) ? '$' + n.toFixed(2) : '—';
+    return formatRupees(value);
   }
 
   protected badge(status: string): string {
     switch (status) {
       case 'PAID':
+      case 'APPROVED':
         return 'text-bg-success';
+      case 'REJECTED':
+        return 'text-bg-danger';
       case 'ISSUED':
         return 'text-bg-warning';
       default:

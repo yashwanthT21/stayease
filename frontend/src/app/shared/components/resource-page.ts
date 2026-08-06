@@ -7,9 +7,25 @@ import { CrudService } from '../../core/services/crud.service';
 import { ToastService } from '../../core/services/toast.service';
 import { AuthService } from '../../core/auth/auth.service';
 import { getResource } from '../../core/registry';
-import { FieldConfig, FilterConfig, PatchAction, ResourceConfig } from '../crud/resource-config';
+import {
+  ColumnFilterConfig,
+  FieldConfig,
+  FilterConfig,
+  PatchAction,
+  ResourceConfig,
+  RowEditorConfig,
+} from '../crud/resource-config';
 import { HasId } from '../../core/models/dtos';
-import { LabelizePipe } from '../pipes/labelize.pipe';
+import { LabelizePipe, labelize } from '../pipes/labelize.pipe';
+import { formatRupees } from '../money';
+import { SelectValueDirective } from '../ui/select-value';
+
+/**
+ * Text longer than this is ellipsised in the table and gets a "read it all"
+ * button. Chosen to match .se-truncate's 260px column cap — below it the cell
+ * shows the whole value anyway, so offering to expand would be noise.
+ */
+const TRUNCATE_AT = 60;
 
 type Row = Record<string, unknown> & HasId;
 interface RefOption {
@@ -26,7 +42,7 @@ interface RefOption {
 @Component({
   selector: 'app-resource-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ReactiveFormsModule, LabelizePipe, LowerCasePipe],
+  imports: [ReactiveFormsModule, LabelizePipe, LowerCasePipe, SelectValueDirective],
   templateUrl: './resource-page.html',
 })
 export class ResourcePageComponent implements OnInit {
@@ -71,9 +87,19 @@ export class ResourcePageComponent implements OnInit {
     });
   }
 
+  /** Chosen value per column-header dropdown ('' / missing = All). */
+  readonly columnFilterValues = signal<Record<string, string>>({});
+
   readonly filteredRows = computed(() => {
+    const picks = this.columnFilterValues();
+    const active = Object.entries(picks).filter(([, v]) => v !== '' && v !== undefined);
+    let rows = this.rows();
+    if (active.length) {
+      // Matched against the DISPLAYED text so a header dropdown can offer
+      // reader-facing options (e.g. "Verified") for several stored enum values.
+      rows = rows.filter((r) => active.every(([col, want]) => this.display(r, col) === want));
+    }
     const term = this.search().trim().toLowerCase();
-    const rows = this.rows();
     if (!term) {
       return rows;
     }
@@ -241,6 +267,9 @@ export class ResourcePageComponent implements OnInit {
 
   clearFilters(): void {
     this.filterForm.reset();
+    // "Clear" means clear everything the user narrowed down by, including the
+    // per-column header pickers — otherwise a hidden column filter survives it.
+    this.columnFilterValues.set({});
     this.rows.set([]);
     if (!this.gated()) {
       this.load();
@@ -298,16 +327,33 @@ export class ResourcePageComponent implements OnInit {
   }
 
   /**
-   * Write a native <select>'s chosen value into its reactive control. The
-   * selects are bound this way — (change) + [selected] rather than
-   * formControlName — because a formControlName <select> can drop the first
-   * choice in this zoneless app (options are also async for references),
-   * leaving required fields looking unselected. The control still owns
-   * validation and submission; we only feed it the value reliably.
+   * Write a native <select>'s chosen value into its reactive control.
+   *
+   * The selects are bound through SelectValueDirective rather than
+   * formControlName because a formControlName <select> can drop the first choice
+   * in this zoneless app (reference options also arrive async), leaving required
+   * fields looking unselected. The control still owns validation and submission;
+   * we only feed it the value reliably.
    */
-  writeSelect(scope: 'form' | 'filter', key: string, event: Event): void {
+  writeSelect(scope: 'form' | 'filter', key: string, value: string): void {
     const group = scope === 'filter' ? this.filterForm : this.form;
-    group?.get(key)?.setValue((event.target as HTMLSelectElement).value);
+    group?.get(key)?.setValue(value);
+  }
+
+  /**
+   * The current control value as a string the <select> can match against an
+   * option. Numeric reference ids are stringified so `[seSelectValue]` compares
+   * like-for-like with `<option [value]="o.value">`.
+   *
+   * This pair of readers is what makes the selection STICK: the directive
+   * re-asserts this value onto the element after every render, so a late-arriving
+   * options list (or any re-render of the modal) can no longer leave the browser
+   * showing option 0 while the control holds the real choice.
+   */
+  selectValue(scope: 'form' | 'filter', key: string): string {
+    const group = scope === 'filter' ? this.filterForm : this.form;
+    const value = group?.get(key)?.value;
+    return value === null || value === undefined ? '' : String(value);
   }
 
   // ---------------- create / edit ----------------
@@ -480,6 +526,12 @@ export class ResourcePageComponent implements OnInit {
     if (value === null || value === undefined || value === '') {
       return '—';
     }
+    if (f?.valueLabels) {
+      const mapped = f.valueLabels[String(value)];
+      if (mapped !== undefined) {
+        return mapped;
+      }
+    }
     if (f?.type === 'reference' && f.ref) {
       const opt = this.optionsForResource(f.ref.resourceKey).find((o) => o.value === Number(value));
       return opt ? opt.label : `#${value}`;
@@ -490,12 +542,119 @@ export class ResourcePageComponent implements OnInit {
     if (f?.type === 'datetime') {
       return String(value).replace('T', ' ').slice(0, 16);
     }
+    if (f?.type === 'select') {
+      return labelize(value);
+    }
     return String(value);
   }
 
+  // ---------------- column-header filters ----------------
+  columnFilterFor(column: string): ColumnFilterConfig | undefined {
+    return this.config.columnFilters?.find((c) => c.key === column);
+  }
+
+  columnFilterValue(column: string): string {
+    return this.columnFilterValues()[column] ?? '';
+  }
+
+  onColumnFilter(column: string, value: string): void {
+    this.columnFilterValues.update((m) => ({ ...m, [column]: value }));
+    this.page.set(1);
+  }
+
+  // ---------------- editable per-row dropdowns ----------------
+
+  /** The row-editor for a column, when the current role may actually change it. */
+  rowEditorFor(column: string): RowEditorConfig | undefined {
+    const editor = this.config.rowEditors?.find((e) => e.key === column);
+    if (!editor) {
+      return undefined;
+    }
+    const role = this.auth.role();
+    // roles is an explicit allow-list because the resource may be read-only for
+    // this role overall (Guests is, for a manager) while this one field is not.
+    return !editor.roles || (role && editor.roles.includes(role)) ? editor : undefined;
+  }
+
+  rowEditorValue(editor: RowEditorConfig, row: Row): string {
+    const current = editor.fromRow(row);
+    // Fall back to the first option so a row with no stored value still shows a
+    // definite answer (verification defaults to Unverified) rather than a blank.
+    return editor.options.includes(current) ? current : editor.options[0];
+  }
+
+  /** Rows currently being saved by a row-editor, so we can disable those selects. */
+  readonly savingRows = signal<Set<number>>(new Set());
+
+  isRowSaving(row: Row): boolean {
+    return this.savingRows().has(row.id);
+  }
+
+  /**
+   * Persist a row-editor pick immediately.
+   *
+   * Sent as a full PUT built from the form fields (the same shape submit() uses),
+   * because these resources expose no per-field PATCH. Server-managed columns are
+   * excluded by construction: formFields already drops `hideInForm` ones, so a
+   * verification change can't accidentally overwrite a review score.
+   */
+  onRowEdit(editor: RowEditorConfig, row: Row, option: string): void {
+    if (this.rowEditorValue(editor, row) === option) {
+      return; // no change (the directive re-asserting the same value)
+    }
+    const payload: Record<string, unknown> = {};
+    for (const f of this.formFields) {
+      const raw = f.key === editor.key ? editor.toValue(option) : row[f.key];
+      if (f.type === 'boolean') {
+        payload[f.key] = !!raw;
+        continue;
+      }
+      if (raw === null || raw === undefined || raw === '') {
+        continue;
+      }
+      payload[f.key] = f.type === 'number' || f.type === 'money' || f.type === 'reference' ? Number(raw) : raw;
+    }
+
+    this.savingRows.update((s) => new Set(s).add(row.id));
+    const release = () =>
+      this.savingRows.update((s) => {
+        const next = new Set(s);
+        next.delete(row.id);
+        return next;
+      });
+
+    this.crud.update<Row>(this.config.apiBase, row.id, payload).subscribe({
+      next: (saved) => {
+        release();
+        // Patch the one row in place rather than reloading: a full reload would
+        // reset the page and lose the reader's position in a long table.
+        this.rows.update((rows) => rows.map((r) => (r.id === row.id ? { ...r, ...saved } : r)));
+        this.toast.success(`${columnLabelOf(this.config, editor.key)} updated.`);
+      },
+      error: release,
+    });
+  }
+
+  // ---------------- long-text viewer ----------------
+
+  /** The cell whose full text is open in the reader modal, or null. */
+  readonly textView = signal<{ title: string; body: string } | null>(null);
+
+  /** True when the table will ellipsise this cell, so it needs a way out. */
+  isLongText(row: Row, column: string): boolean {
+    return this.display(row, column).length > TRUNCATE_AT;
+  }
+
+  openText(row: Row, column: string): void {
+    this.textView.set({ title: this.columnLabel(column), body: this.display(row, column) });
+  }
+
+  closeText(): void {
+    this.textView.set(null);
+  }
+
   money(value: unknown): string {
-    const n = Number(value);
-    return Number.isFinite(n) ? '$' + n.toFixed(2) : String(value);
+    return formatRupees(value, String(value));
   }
 
   /** Bootstrap contextual colour for an enum value, by name heuristics. */
@@ -526,4 +685,9 @@ export class ResourcePageComponent implements OnInit {
     this.search.set((event.target as HTMLInputElement).value);
     this.page.set(1);
   }
+}
+
+/** Column label lookup usable outside the component instance. */
+function columnLabelOf(config: ResourceConfig, key: string): string {
+  return config.fields.find((f) => f.key === key)?.label ?? key;
 }

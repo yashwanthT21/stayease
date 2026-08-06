@@ -30,7 +30,8 @@ server:
   port: 8085
 
 # This app is now a client in the service mesh: it registers with Eureka and
-# resolves http://property-service to a live instance when validating a propertyId.
+# resolves the "property-service" name to a live instance when validating a
+# propertyId.
 eureka:
   client:
     service-url:
@@ -38,11 +39,11 @@ eureka:
   instance:
     prefer-ip-address: true
 
-# The base host of property-service is a logical name resolved by the load
-# balancer; overridable for environments without Eureka.
-services:
-  property:
-    base-url: ${PROPERTY_SERVICE_URL:http://property-service}
+# Outbound inter-service calls go through @FeignClient interfaces (see
+# com.stayease.common.client). They address services by their Eureka NAME, so
+# there is no host to configure here. For an environment without Eureka, pin a
+# client to a fixed address with e.g.
+#   spring.cloud.openfeign.client.config.property-service.url: http://localhost:8001
 
 # JWT settings. In a real deployment the secret would come from an environment
 # variable / secrets manager, never be committed. It must be long enough (>=32

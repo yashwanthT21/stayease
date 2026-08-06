@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { AuthService } from '../core/auth/auth.service';
-import { NAV_GROUP_ORDER, RESOURCES } from '../core/registry';
+import { NAV_GROUP_ORDER, RESOURCES, canRoleUseResource } from '../core/registry';
 import { ResourceConfig } from '../shared/crud/resource-config';
 import { LabelizePipe } from '../shared/pipes/labelize.pipe';
 import { OWNER_NAV } from '../features/owner/owner-nav';
@@ -32,7 +32,12 @@ export class ShellComponent {
 
   /** Nav items the current role is allowed to see, grouped and ordered. */
   protected readonly navGroups = computed<NavGroup[]>(() => {
-    const visible = RESOURCES.filter((r) => !r.hideInNav && this.auth.hasAnyRole(r.roles));
+    // Roles with a fixed workspace (housekeeping, finance) only get their own
+    // resources — see ROLE_RESOURCE_ALLOWLIST in core/registry.ts.
+    const role = this.auth.role();
+    const visible = RESOURCES.filter(
+      (r) => !r.hideInNav && this.auth.hasAnyRole(r.roles) && canRoleUseResource(role, r.key),
+    );
     const groups: NavGroup[] = [];
     for (const name of NAV_GROUP_ORDER) {
       const items = visible.filter((r) => r.group === name);

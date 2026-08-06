@@ -3,11 +3,13 @@ import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angula
 import { CrudService } from '../../core/services/crud.service';
 import { ToastService } from '../../core/services/toast.service';
 import { AuthService } from '../../core/auth/auth.service';
-import { MaintenanceIssueResponse, PropertyResponse } from '../../core/models/dtos';
+import { MaintenanceIssueResponse, PropertyResponse, UserResponse } from '../../core/models/dtos';
 import { MAINTENANCE_CATEGORIES, MAINTENANCE_PRIORITIES, MAINTENANCE_STATUSES, REPORTED_BY_TYPES } from '../../core/models/enums';
 import { LabelizePipe } from '../../shared/pipes/labelize.pipe';
+import { formatRupees } from '../../shared/money';
 import { OwnerPageHeaderComponent } from '../../shared/ui/owner-page-header';
 import { OwnerDialogComponent } from '../../shared/ui/owner-dialog';
+import { SelectValueDirective } from '../../shared/ui/select-value';
 
 /**
  * Maintenance issues screen (Maintenance domain) — a bespoke, self-contained
@@ -18,13 +20,14 @@ import { OwnerDialogComponent } from '../../shared/ui/owner-dialog';
  *
  * A PROPERTY_MANAGER only sees issues for the properties assigned to them (the
  * backend scopes /api/properties, and we filter the list to those ids). Native
- * <select>s are driven by signals + (change) rather than formControlName so the
- * first choice registers reliably in this zoneless app.
+ * <select>s are driven by signals through SelectValueDirective rather than
+ * formControlName, so a choice registers reliably in this zoneless app AND sticks
+ * when the option list re-renders.
  */
 @Component({
   selector: 'app-maintenance-issue',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ReactiveFormsModule, LabelizePipe, OwnerPageHeaderComponent, OwnerDialogComponent],
+  imports: [ReactiveFormsModule, LabelizePipe, OwnerPageHeaderComponent, OwnerDialogComponent, SelectValueDirective],
   templateUrl: './maintenance-issue.html',
 })
 export class MaintenanceIssueComponent {
@@ -44,6 +47,8 @@ export class MaintenanceIssueComponent {
   protected readonly saving = signal(false);
   protected readonly rows = signal<MaintenanceIssueResponse[]>([]);
   protected readonly properties = signal<PropertyResponse[]>([]);
+  /** Feeds the "Reported by" people picker and resolves ids to names in the table. */
+  protected readonly users = signal<UserResponse[]>([]);
   protected readonly search = signal('');
   protected readonly propertyFilter = signal<string>('');
   protected readonly statusFilter = signal<string>('');
@@ -63,6 +68,23 @@ export class MaintenanceIssueComponent {
   protected readonly selectedCategory = signal<string>('');
   protected readonly selectedPriority = signal<string>('MEDIUM');
   protected readonly selectedStatus = signal<string>('OPEN');
+
+  // ---- "Reported by" people picker ----
+  // A type-to-search combobox over the user directory. The id is what gets sent;
+  // the query string is only what the operator typed, so a half-typed name can
+  // never be mistaken for a selection.
+  protected readonly selectedReporterId = signal<number | null>(null);
+  protected readonly reporterQuery = signal('');
+  protected readonly reporterOpen = signal(false);
+
+  protected readonly reporterMatches = computed(() => {
+    const term = this.reporterQuery().trim().toLowerCase();
+    const all = this.users();
+    const matches = term
+      ? all.filter((u) => `${u.name} ${u.email} ${u.role}`.toLowerCase().includes(term))
+      : all;
+    return matches.slice(0, 8); // keep the dropdown scannable
+  });
 
   // Plain fields live in the reactive form; the selects are signals.
   protected form: FormGroup = this.buildForm();
@@ -102,6 +124,12 @@ export class MaintenanceIssueComponent {
       },
       error: () => this.properties.set([]),
     });
+    // The people picker's directory. A 403 (role without directory access) just
+    // leaves the picker empty rather than breaking the screen.
+    this.crud.list<UserResponse>('/api/users/directory').subscribe({
+      next: (rows) => this.users.set(rows),
+      error: () => this.users.set([]),
+    });
   }
 
   private load(): void {
@@ -116,8 +144,8 @@ export class MaintenanceIssueComponent {
   }
 
   private buildForm(row?: MaintenanceIssueResponse): FormGroup {
+    // reportedById is NOT a form control — it comes from the people picker signal.
     return this.fb.group({
-      reportedById: [row?.reportedById ?? '', [Validators.required, Validators.min(1)]],
       description: [row?.description ?? ''],
       assignedContractorId: [row?.assignedContractorId ?? ''],
       resolvedDate: [row?.resolvedDate ? String(row.resolvedDate).slice(0, 16) : ''],
@@ -128,28 +156,66 @@ export class MaintenanceIssueComponent {
   protected onSearch(event: Event): void {
     this.search.set((event.target as HTMLInputElement).value);
   }
-  protected onPropertyFilter(event: Event): void {
-    this.propertyFilter.set((event.target as HTMLSelectElement).value);
+  // Every select on this screen is bound through SelectValueDirective, which
+  // re-asserts the signal's value onto the element after each render. That's what
+  // stops a pick reverting to the first option when the properties list resolves
+  // after the modal opened, or when @for re-renders the option list.
+  protected onPropertyFilter(value: string): void {
+    this.propertyFilter.set(value);
   }
-  protected onStatusFilter(event: Event): void {
-    this.statusFilter.set((event.target as HTMLSelectElement).value);
+  protected onStatusFilter(value: string): void {
+    this.statusFilter.set(value);
   }
 
-  protected onProperty(event: Event): void {
-    const raw = (event.target as HTMLSelectElement).value;
-    this.selectedPropertyId.set(raw ? Number(raw) : null);
+  protected onProperty(value: string): void {
+    this.selectedPropertyId.set(value ? Number(value) : null);
   }
-  protected onReporterType(event: Event): void {
-    this.selectedReporterType.set((event.target as HTMLSelectElement).value);
+  protected onReporterType(value: string): void {
+    this.selectedReporterType.set(value);
   }
-  protected onCategory(event: Event): void {
-    this.selectedCategory.set((event.target as HTMLSelectElement).value);
+  protected onCategory(value: string): void {
+    this.selectedCategory.set(value);
   }
-  protected onPriority(event: Event): void {
-    this.selectedPriority.set((event.target as HTMLSelectElement).value);
+  protected onPriority(value: string): void {
+    this.selectedPriority.set(value);
   }
-  protected onStatus(event: Event): void {
-    this.selectedStatus.set((event.target as HTMLSelectElement).value);
+  protected onStatus(value: string): void {
+    this.selectedStatus.set(value);
+  }
+
+  // ---- "Reported by" people picker ----
+  protected onReporterSearch(event: Event): void {
+    this.reporterQuery.set((event.target as HTMLInputElement).value);
+    // Typing invalidates any earlier pick — the operator must choose again, so we
+    // never save a stale id under a freshly typed name.
+    this.selectedReporterId.set(null);
+    this.reporterOpen.set(true);
+  }
+
+  protected openReporterList(): void {
+    this.reporterOpen.set(true);
+  }
+
+  protected closeReporterList(): void {
+    this.reporterOpen.set(false);
+  }
+
+  /** Bound to (mousedown) so it lands before the input's blur closes the list. */
+  protected pickReporter(user: UserResponse): void {
+    this.selectedReporterId.set(user.id);
+    this.reporterQuery.set(user.name);
+    this.reporterOpen.set(false);
+  }
+
+  protected clearReporter(): void {
+    this.selectedReporterId.set(null);
+    this.reporterQuery.set('');
+    this.reporterOpen.set(false);
+  }
+
+  protected selectedReporter(): UserResponse | undefined {
+    const id = this.selectedReporterId();
+    return id == null ? undefined : this.users().find((u) => u.id === id);
   }
 
   protected openCreate(): void {
@@ -160,6 +226,7 @@ export class MaintenanceIssueComponent {
     this.selectedCategory.set('');
     this.selectedPriority.set('MEDIUM');
     this.selectedStatus.set('OPEN');
+    this.clearReporter();
     this.form = this.buildForm();
     this.modalOpen.set(true);
   }
@@ -172,6 +239,11 @@ export class MaintenanceIssueComponent {
     this.selectedCategory.set(row.category);
     this.selectedPriority.set(row.priority);
     this.selectedStatus.set(row.status);
+    this.selectedReporterId.set(row.reportedById ?? null);
+    // Show the person's name when we know it; fall back to the raw id for a user
+    // the directory doesn't cover (deleted account, or no directory access).
+    this.reporterQuery.set(row.reportedById != null ? this.userName(row.reportedById) : '');
+    this.reporterOpen.set(false);
     this.form = this.buildForm(row);
     this.modalOpen.set(true);
   }
@@ -183,6 +255,9 @@ export class MaintenanceIssueComponent {
   protected propertyMissing(): boolean {
     return this.attempted() && this.selectedPropertyId() == null;
   }
+  protected reportedByMissing(): boolean {
+    return this.attempted() && this.selectedReporterId() == null;
+  }
   protected reporterMissing(): boolean {
     return this.attempted() && !this.selectedReporterType();
   }
@@ -193,7 +268,14 @@ export class MaintenanceIssueComponent {
   protected submit(): void {
     this.attempted.set(true);
     const propertyId = this.selectedPropertyId();
-    if (this.form.invalid || propertyId == null || !this.selectedReporterType() || !this.selectedCategory()) {
+    const reportedById = this.selectedReporterId();
+    if (
+      this.form.invalid ||
+      propertyId == null ||
+      reportedById == null ||
+      !this.selectedReporterType() ||
+      !this.selectedCategory()
+    ) {
       this.form.markAllAsTouched();
       return;
     }
@@ -201,6 +283,7 @@ export class MaintenanceIssueComponent {
     const raw = this.form.getRawValue() as Record<string, unknown>;
     const payload: Record<string, unknown> = {
       propertyId,
+      reportedById,
       reportedByType: this.selectedReporterType(),
       category: this.selectedCategory(),
       priority: this.selectedPriority(),
@@ -210,8 +293,7 @@ export class MaintenanceIssueComponent {
       if (value === null || value === undefined || value === '') {
         continue; // omit empty optionals so the backend applies its defaults
       }
-      payload[key] =
-        key === 'reportedById' || key === 'assignedContractorId' || key === 'amountSpent' ? Number(value) : value;
+      payload[key] = key === 'assignedContractorId' || key === 'amountSpent' ? Number(value) : value;
     }
 
     this.saving.set(true);
@@ -275,12 +357,16 @@ export class MaintenanceIssueComponent {
     return p ? p.title : `#${id}`;
   }
 
-  protected money(value: unknown): string {
-    if (value == null || value === '') {
+  protected userName(id: number | undefined): string {
+    if (id == null) {
       return '—';
     }
-    const n = Number(value);
-    return Number.isFinite(n) ? '$' + n.toFixed(2) : '—';
+    const u = this.users().find((x) => x.id === Number(id));
+    return u ? u.name : `#${id}`;
+  }
+
+  protected money(value: unknown): string {
+    return formatRupees(value);
   }
 
   protected fmtDateTime(value: string | undefined): string {

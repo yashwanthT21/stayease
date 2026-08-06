@@ -21,9 +21,23 @@ public final class OwnerStatementMapper {
         return s;
     }
 
+    /**
+     * Finance editing a statement. When they change the figures of one the owner
+     * already REJECTED, that is a re-issue: the old decision no longer applies to
+     * these numbers, so it is cleared and the statement goes back to awaiting the
+     * owner. Without this, a rejected statement could be quietly edited and remain
+     * rejected (blocking payout forever) or — worse, if the reverse were done —
+     * keep a stale APPROVED against figures the owner never saw.
+     */
     public static void updateEntity(OwnerStatement s, OwnerStatementRequest request) {
         s.setOwnerId(request.ownerId());
+        boolean wasDecided = s.getStatus() == StatementStatus.APPROVED
+                || s.getStatus() == StatementStatus.REJECTED;
         apply(s, request);
+        if (wasDecided && s.getStatus() == StatementStatus.ISSUED) {
+            s.setOwnerNote(null);
+            s.setDecidedDate(null);
+        }
         // generatedDate left unchanged on update
     }
 
@@ -63,6 +77,8 @@ public final class OwnerStatementMapper {
                 s.getMaintenanceCost(),
                 s.getNetPayout(),
                 s.getGeneratedDate(),
-                s.getStatus());
+                s.getStatus(),
+                s.getOwnerNote(),
+                s.getDecidedDate());
     }
 }

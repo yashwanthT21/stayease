@@ -60,6 +60,15 @@
             <version>0.12.6</version>
             <scope>runtime</scope>
         </dependency>
+
+        <!-- Unit tests: JUnit 5 + AssertJ + Mockito (see src/test/java).
+             jjwt-impl above is runtime-scoped, which Maven also puts on the test
+             classpath, so JwtServiceTest can sign tokens without redeclaring it. -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <dependencyManagement>

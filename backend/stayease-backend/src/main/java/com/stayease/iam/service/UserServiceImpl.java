@@ -4,6 +4,7 @@ import com.stayease.common.exception.DuplicateResourceException;
 import com.stayease.common.exception.ResourceNotFoundException;
 import com.stayease.iam.dto.UserRequest;
 import com.stayease.iam.dto.UserResponse;
+import com.stayease.iam.dto.UserSummaryResponse;
 import com.stayease.iam.entity.User;
 import com.stayease.iam.enums.UserRole;
 import com.stayease.iam.mapper.UserMapper;
@@ -67,8 +68,26 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional(readOnly = true)
+    public List<UserResponse> getOwners() {
+        return userRepository.findByRole(UserRole.OWNER)
+                .stream()
+                .map(UserMapper::toResponse)
+                .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public List<UserResponse> getHousekeepers() {
         return userRepository.findByRole(UserRole.HOUSEKEEPING)
+                .stream()
+                .map(UserMapper::toResponse)
+                .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<UserResponse> getFinanceUsers() {
+        return userRepository.findByRole(UserRole.FINANCE)
                 .stream()
                 .map(UserMapper::toResponse)
                 .toList();
@@ -79,6 +98,13 @@ public class UserServiceImpl implements UserService {
     public UserResponse getById(Long id) {
         User user = findUserOrThrow(id);
         return UserMapper.toResponse(user);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public UserSummaryResponse getSummaryById(Long id) {
+        User user = findUserOrThrow(id);
+        return new UserSummaryResponse(user.getId(), user.getName(), user.getRole());
     }
 
     @Override

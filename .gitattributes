@@ -1,0 +1,13 @@
+# Windows batch files MUST be checked out with CRLF endings.
+#
+# cmd.exe parses a .cmd file by byte offset and assumes CRLF: with LF-only
+# endings it loses a character per line and progressively garbles the script
+# (labels stop resolving, `rem` lines execute as commands). Marking them here
+# means the working copy is always correct regardless of a clone's
+# core.autocrlf setting.
+*.cmd text eol=crlf
+*.bat text eol=crlf
+
+# The POSIX counterparts must stay LF for the same reason in reverse.
+mvnw text eol=lf
+*.sh text eol=lf

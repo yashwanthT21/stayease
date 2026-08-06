@@ -38,7 +38,7 @@
           @for (s of statements(); track s.id) {
             <tr>
               <td class="text-muted">{{ s.id }}</td>
-              <td>{{ s.ownerId }}</td>
+              <td>{{ ownerName(s.ownerId) }}</td>
               <td class="fw-semibold">{{ s.period }}</td>
               <td class="text-end">{{ money(s.grossRevenue) }}</td>
               <td class="text-end text-muted">{{ money(s.platformFee) }}</td>
@@ -46,10 +46,26 @@
               <td class="text-end text-muted">{{ money(s.cleaningRevenue) }}</td>
               <td class="text-end text-muted">{{ money(s.maintenanceCost) }}</td>
               <td class="text-end fw-semibold text-success">{{ money(s.netPayout) }}</td>
-              <td><span class="badge {{ badge(s.status) }}">{{ s.status | labelize }}</span></td>
+              <td>
+                <span class="badge {{ badge(s.status) }}" [title]="payoutHint(s)">{{ s.status | labelize }}</span>
+                <!-- The owner's own words on a rejection: this is what Finance has
+                     to act on, so it sits in the row rather than only in a
+                     notification that can be dismissed. -->
+                @if (isRejected(s) && s.ownerNote) {
+                  <div class="small text-danger mt-1 se-wrap-text" style="max-width: 320px">
+                    <i class="bi bi-chat-left-quote me-1"></i>{{ s.ownerNote }}
+                  </div>
+                }
+                @if (isPayable(s)) {
+                  <div class="small text-success mt-1"><i class="bi bi-unlock me-1"></i>Payout unlocked</div>
+                } @else if (s.status === 'ISSUED') {
+                  <div class="small text-muted mt-1"><i class="bi bi-hourglass-split me-1"></i>Awaiting owner</div>
+                }
+              </td>
               <td class="text-end">
-                <button class="btn btn-sm btn-outline-secondary me-1" (click)="openEdit(s)" title="Edit statement">
-                  <i class="bi bi-pencil"></i>
+                <button class="btn btn-sm btn-outline-secondary me-1" (click)="openEdit(s)"
+                        [title]="isRejected(s) ? 'Correct the figures and re-issue' : 'Edit statement'">
+                  <i class="bi {{ isRejected(s) ? 'bi-arrow-repeat' : 'bi-pencil' }}"></i>
                 </button>
                 <button class="btn btn-sm btn-outline-danger" (click)="askDelete(s)" title="Delete statement">
                   <i class="bi bi-trash"></i>
@@ -69,10 +85,24 @@
     <div class="modal-body">
       <div class="row g-3">
         <div class="col-md-6">
-          <label class="form-label">Owner (user id) <span class="text-danger">*</span></label>
-          <input type="number" min="1" class="form-control" [value]="ownerId() ?? ''" (input)="onOwnerId($event)"
-                 [class.is-invalid]="triedSubmit() && !ownerId()" placeholder="e.g. 42" />
-          <div class="invalid-feedback">Enter the owner's user id.</div>
+          <label class="form-label">Owner <span class="text-danger">*</span></label>
+          <!-- Pick by name. The number input is only a fallback for when the owner
+               list couldn't be loaded, so the screen still works. -->
+          @if (owners().length) {
+            <select class="form-select" [class.is-invalid]="triedSubmit() && !ownerId()"
+                    [seSelectValue]="ownerId() ?? ''" (seSelectValueChange)="onOwnerId($event)">
+              <option value="">— Select an owner —</option>
+              @for (o of owners(); track o.id) {
+                <option [value]="o.id">{{ ownerLabel(o) }}</option>
+              }
+            </select>
+            <div class="invalid-feedback">Choose the owner this statement is for.</div>
+          } @else {
+            <input type="number" min="1" class="form-control" [value]="ownerId() ?? ''" (input)="onOwnerIdInput($event)"
+                   [class.is-invalid]="triedSubmit() && !ownerId()" placeholder="e.g. 42" />
+            <div class="invalid-feedback">Enter the owner's user id.</div>
+            <div class="form-text">Owner list unavailable — enter the user id.</div>
+          }
         </div>
         <div class="col-md-6">
           <label class="form-label">Period (month) <span class="text-danger">*</span></label>
@@ -86,7 +116,7 @@
         <div class="col-md-4">
           <label class="form-label">Base cleaning cost / checkout</label>
           <div class="input-group">
-            <span class="input-group-text">$</span>
+            <span class="input-group-text">&#8377;</span>
             <input type="number" min="0" step="0.01" class="form-control" [value]="baseCleaningCost()" (input)="onBaseCleaning($event)" />
           </div>
         </div>
@@ -100,7 +130,7 @@
         <div class="col-md-4">
           <label class="form-label">Management fee (flat)</label>
           <div class="input-group">
-            <span class="input-group-text">$</span>
+            <span class="input-group-text">&#8377;</span>
             <input type="number" min="0" step="0.01" class="form-control" [value]="managementFee()" (input)="onManagementFee($event)" />
           </div>
         </div>
@@ -149,11 +179,15 @@
 
         <div class="mt-3">
           <label class="form-label">Status</label>
-          <select class="form-select" (change)="onStatus($event)">
+          <select class="form-select" [seSelectValue]="status()" (seSelectValueChange)="onStatus($event)">
             @for (s of statuses; track s) {
-              <option [value]="s" [selected]="status() === s">{{ s | labelize }}</option>
+              <option [value]="s">{{ s | labelize }}</option>
             }
           </select>
+          <div class="form-text">
+            <i class="bi bi-info-circle me-1"></i>Issue it to send it to the owner. They approve or
+            reject it, and a payout can only be released once they've approved.
+          </div>
         </div>
       } @else {
         <div class="alert alert-secondary mt-3 mb-0 small">
@@ -176,50 +210,70 @@
 @if (editTarget(); as e) {
   <app-owner-dialog title="Edit Statement" icon="bi-pencil" size="lg" (dismiss)="closeEdit()">
     <div class="modal-body">
-      <p class="text-muted small">Statement for owner {{ e.ownerId }} · {{ e.period }}. Net payout is recalculated from the amounts below.</p>
+      <p class="text-muted small">Statement for {{ ownerName(e.ownerId) }} · {{ e.period }}. Net payout is recalculated from the amounts below.</p>
+
+      <!-- The re-issue path: what the owner objected to, and what saving will do. -->
+      @if (isRejected(e)) {
+        <div class="alert alert-danger py-2 small">
+          <div class="fw-semibold mb-1"><i class="bi bi-x-circle me-1"></i>The owner rejected this statement</div>
+          @if (e.ownerNote) {
+            <div class="se-wrap-text mb-1">“{{ e.ownerNote }}”</div>
+          }
+          Correct the figures below and save — that re-issues it for the owner to review again.
+        </div>
+      } @else if (e.status === 'APPROVED') {
+        <div class="alert alert-warning py-2 small">
+          <i class="bi bi-exclamation-triangle me-1"></i>
+          The owner has already <strong>approved</strong> this statement. Saving changes re-issues it,
+          so they will have to approve the new figures before the payout can be released.
+        </div>
+      }
       <div class="row g-3">
         <div class="col-md-4">
           <label class="form-label">Gross revenue</label>
           <div class="input-group">
-            <span class="input-group-text">$</span>
+            <span class="input-group-text">&#8377;</span>
             <input type="number" min="0" step="0.01" class="form-control" [value]="editGross()" (input)="onEditGross($event)" />
           </div>
         </div>
         <div class="col-md-4">
           <label class="form-label">Cleaning fee</label>
           <div class="input-group">
-            <span class="input-group-text">$</span>
+            <span class="input-group-text">&#8377;</span>
             <input type="number" min="0" step="0.01" class="form-control" [value]="editCleaning()" (input)="onEditCleaning($event)" />
           </div>
         </div>
         <div class="col-md-4">
           <label class="form-label">Platform fee</label>
           <div class="input-group">
-            <span class="input-group-text">$</span>
+            <span class="input-group-text">&#8377;</span>
             <input type="number" min="0" step="0.01" class="form-control" [value]="editPlatform()" (input)="onEditPlatform($event)" />
           </div>
         </div>
         <div class="col-md-4">
           <label class="form-label">Management fee</label>
           <div class="input-group">
-            <span class="input-group-text">$</span>
+            <span class="input-group-text">&#8377;</span>
             <input type="number" min="0" step="0.01" class="form-control" [value]="editManagement()" (input)="onEditManagement($event)" />
           </div>
         </div>
         <div class="col-md-4">
           <label class="form-label">Maintenance cost</label>
           <div class="input-group">
-            <span class="input-group-text">$</span>
+            <span class="input-group-text">&#8377;</span>
             <input type="number" min="0" step="0.01" class="form-control" [value]="editMaintenance()" (input)="onEditMaintenance($event)" />
           </div>
         </div>
         <div class="col-md-4">
           <label class="form-label">Status</label>
-          <select class="form-select" (change)="onEditStatus($event)">
+          <select class="form-select" [seSelectValue]="editStatus()" (seSelectValueChange)="onEditStatus($event)">
             @for (s of statuses; track s) {
-              <option [value]="s" [selected]="editStatus() === s">{{ s | labelize }}</option>
+              <option [value]="s">{{ s | labelize }}</option>
             }
           </select>
+          @if (isDecided(e)) {
+            <div class="form-text">Approved/Rejected is the owner's answer — not set from here.</div>
+          }
         </div>
       </div>
       <div class="d-flex justify-content-between align-items-center mt-3 pt-2 border-top">
@@ -231,7 +285,7 @@
       <button type="button" class="btn btn-outline-secondary" (click)="closeEdit()">Cancel</button>
       <button type="button" class="btn btn-primary" [disabled]="savingEdit()" (click)="saveEdit()">
         @if (savingEdit()) { <span class="spinner-border spinner-border-sm me-1"></span> }
-        Save changes
+        {{ isRejected(e) ? 'Save & re-issue' : 'Save changes' }}
       </button>
     </div>
   </app-owner-dialog>

@@ -16,7 +16,7 @@ spring:
             - id: property-service
               uri: lb://property-service
               predicates:
-                - Path=/api/properties/**,/api/availability/**,/api/pricing-rules/**
+                - Path=/api/properties/**,/api/availability/**
             - id: notification-service
               uri: lb://notification-service
               predicates:

@@ -13,6 +13,7 @@ import { BrowsePropertiesComponent } from './features/property/browse-properties
 import { MyReservationsComponent } from './features/booking/my-reservations';
 import { GuestProfileComponent } from './features/booking/guest-profile';
 import { TurnoverAssignmentComponent } from './features/housekeeping/turnover-assignment';
+import { TurnoverChecklistManagerComponent } from './features/housekeeping/turnover-checklist-manager';
 import { CheckInComponent } from './features/stay/check-in';
 import { CheckOutComponent } from './features/stay/check-out';
 import { StatementBuilderComponent } from './features/finance/statement-builder';
@@ -42,6 +43,7 @@ export const routes: Routes = [
         // Some resources use bespoke screens instead of the generic CRUD:
         //  - availability          → the shared month-grid calendar
         //  - turnovers             → the housekeeping turnover-assignment screen
+        //  - checklists            → the housekeeper's turnover-checklist screen
         //  - check-ins/check-outs  → the stay module's hand-written CRUD screens
         //  - owner-statements      → the finance statement-builder (auto-derives amounts)
         //  - maintenance-issues / preventive-maintenance → the maintenance module's screens
@@ -50,17 +52,19 @@ export const routes: Routes = [
             ? AvailabilityCalendarComponent
             : r.key === 'turnovers'
               ? TurnoverAssignmentComponent
-              : r.key === 'check-ins'
-                ? CheckInComponent
-                : r.key === 'check-outs'
-                  ? CheckOutComponent
-                  : r.key === 'owner-statements'
-                    ? StatementBuilderComponent
-                    : r.key === 'maintenance-issues'
-                      ? MaintenanceIssueComponent
-                      : r.key === 'preventive-maintenance'
-                        ? PreventiveMaintenanceComponent
-                        : ResourcePageComponent,
+              : r.key === 'checklists'
+                ? TurnoverChecklistManagerComponent
+                : r.key === 'check-ins'
+                  ? CheckInComponent
+                  : r.key === 'check-outs'
+                    ? CheckOutComponent
+                    : r.key === 'owner-statements'
+                      ? StatementBuilderComponent
+                      : r.key === 'maintenance-issues'
+                        ? MaintenanceIssueComponent
+                        : r.key === 'preventive-maintenance'
+                          ? PreventiveMaintenanceComponent
+                          : ResourcePageComponent,
         canActivate: [roleGuard],
         data: { config: r, roles: r.roles },
       })),

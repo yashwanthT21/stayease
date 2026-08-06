@@ -21,7 +21,38 @@ All commands are **PowerShell** (your default shell).
 > `stayease` database (that data now lives in the services). If you have data in
 > `stayease` you care about, back it up first.
 
-## 1. Start everything (5 terminals, in this order)
+## 1. Start everything
+
+### The one-liner
+
+```cmd
+backend\run-all.cmd
+```
+
+That's it. It opens one window per service (titled `StayEase <name>`), starts the
+registry first and **waits for port 8761** before launching the other four, so
+they always come up in a working order. It also warns you up front if nothing is
+listening on MySQL's port, rather than letting five windows fill with connection
+stack traces.
+
+Notes:
+
+- The ports it uses are the ones in each `application.yml`: eureka **8761**,
+  api-gateway **7000**, property-service **8001**, notification-service **8082**,
+  monolith **8085**. (The tables further down this file still say 8080/8081 — the
+  script is the accurate list.)
+- Re-running it when eureka is already up is safe: it detects that and leaves it
+  alone. It does **not** check the other four, so don't run it twice in a row or
+  you'll get port-in-use errors.
+- To use non-default MySQL credentials, set them first — every window inherits
+  the environment:
+  ```cmd
+  set DB_PASSWORD=your-mysql-password
+  backend\run-all.cmd
+  ```
+- Stop a service with `Ctrl+C` in its window, or just close the window.
+
+### Or start them by hand (5 terminals, in this order)
 
 Open a **separate** PowerShell window per service. Wait for each to log
 `Started ...Application` before moving on.
@@ -95,17 +126,17 @@ $notes          # expect a PROPERTY notification: "Your property ... has been cr
 $noteId = $notes[0].id
 Invoke-RestMethod -Method Patch -Uri "$gw/api/notifications/$noteId/read" -Headers $h
 
-# --- 2f. Add availability + a pricing rule for the property. ---
-$avail = @{ propertyId=$propertyId; calendarDate="2026-08-01"; basePrice=150.00;
-            minimumNights=2 } | ConvertTo-Json
+# --- 2f. Add availability for the property. ---
+# calendarDate must be today or later; a past date is rejected with a 400.
+$avail = @{ propertyId=$propertyId; calendarDate=(Get-Date).ToString('yyyy-MM-dd');
+            basePrice=150.00; minimumNights=2 } | ConvertTo-Json
 Invoke-RestMethod -Method Post -Uri "$gw/api/availability" -Headers $h `
   -ContentType 'application/json' -Body $avail
-
-$rule = @{ propertyId=$propertyId; ruleType="WEEKEND_SURCHARGE"; adjustment="PERCENT";
-           adjustmentValue=15 } | ConvertTo-Json
-Invoke-RestMethod -Method Post -Uri "$gw/api/pricing-rules" -Headers $h `
-  -ContentType 'application/json' -Body $rule
 ```
+
+> `/api/pricing-rules` no longer exists — nothing consumed it, so the endpoint was
+> removed. The `pricing_rules` table stays behind only for cascade cleanup when a
+> property is deleted.
 
 ## 3. Manual test — the monolith now calls property-service
 
@@ -134,6 +165,60 @@ $bad = @{ propertyId=999999; guestId=$guestId; checkInDate="2026-08-01";
 try { Invoke-RestMethod -Method Post -Uri "$mono/api/reservations" -Headers $h `
         -ContentType 'application/json' -Body $bad }
 catch { "Rejected via remote check -> $($_.Exception.Response.StatusCode)" }
+```
+
+## 3b. Manual test — the two cross-role notification flows
+
+Both are inter-service calls over OpenFeign. Continue in the same window as §3.
+
+```powershell
+# --- Owner assigns a MANAGER to the property (property-service -> IAM for the
+#     owner's name, then -> notification-service for the manager). ---
+$m = @{ name="Raj Manager"; email="raj@example.com"; password="secret123";
+        phone="555-0101"; role="PROPERTY_MANAGER" } | ConvertTo-Json
+$mgr = Invoke-RestMethod -Method Post -Uri "$gw/api/auth/register" -ContentType 'application/json' -Body $m
+$hm  = @{ Authorization = "Bearer $($mgr.token)" }
+
+$assign = @{ ownerId=$ownerId; managerId=$mgr.userId; title="Sea View Villa"; type="VILLA";
+             city="Goa"; maxGuests=6; bedrooms=3; bathrooms=2 } | ConvertTo-Json
+Invoke-RestMethod -Method Put -Uri "$gw/api/properties/$propertyId" -Headers $h `
+  -ContentType 'application/json' -Body $assign
+
+# expect: 'You have been assigned to "Sea View Villa" by Ada Owner.'
+Invoke-RestMethod -Method Get -Uri "$gw/api/notifications?userId=$($mgr.userId)" -Headers $hm |
+  ForEach-Object { "[$($_.category)] $($_.message)" }
+# Re-running the same PUT sends NOTHING further — only a real change of manager
+# notifies, so editing a title doesn't nag them.
+
+# --- Manager assigns a turnover to a HOUSEKEEPER (monolith :8085). ---
+$k = @{ name="Meera Clean"; email="meera@example.com"; password="secret123";
+        phone="555-0102"; role="HOUSEKEEPING" } | ConvertTo-Json
+$hk = Invoke-RestMethod -Method Post -Uri "$gw/api/auth/register" -ContentType 'application/json' -Body $k
+$hh = @{ Authorization = "Bearer $($hk.token)" }
+
+$turn = @{ propertyId=$propertyId; assignedToId=$hk.userId; assignedDate="2027-01-10";
+           startByTime="2027-01-10T11:00:00"; completeByTime="2027-01-10T14:00:00" } | ConvertTo-Json
+$t = Invoke-RestMethod -Method Post -Uri "$mono/api/turnovers" -Headers $hm `
+       -ContentType 'application/json' -Body $turn
+
+# expect: 'New turnover assigned to you: Sea View Villa (Goa) on 2027-01-10. ...'
+Invoke-RestMethod -Method Get -Uri "$gw/api/notifications?userId=$($hk.userId)" -Headers $hh |
+  ForEach-Object { "[$($_.category)] $($_.message)" }
+
+# --- Housekeeper finishes the clean -> the MANAGER is told, because only they
+#     can verify it and set the overall status. ---
+Invoke-RestMethod -Method Patch `
+  -Uri "$mono/api/turnovers/$($t.id)/housekeeper-status?value=COMPLETED" -Headers $hh
+
+# expect: 'Meera Clean has completed the turnover for Sea View Villa (Goa) ...'
+Invoke-RestMethod -Method Get -Uri "$gw/api/notifications?userId=$($mgr.userId)" -Headers $hm |
+  ForEach-Object { "[$($_.category)] $($_.message)" }
+# Re-sending COMPLETED sends nothing more; only the transition INTO completed is news.
+
+# Ticking off checklist items is deliberately silent — one notification per task
+# would bury the completion message above.
+Invoke-RestMethod -Method Post -Uri "$mono/api/checklists" -Headers $hh -ContentType 'application/json' `
+  -Body (@{ turnoverId=$t.id; taskName="Strip and remake all beds"; category="LAUNDRY" } | ConvertTo-Json)
 ```
 
 ## 4. Optional — prove the notification call is best-effort

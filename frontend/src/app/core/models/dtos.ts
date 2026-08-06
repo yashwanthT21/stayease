@@ -5,10 +5,10 @@
  * ISO date-time) as serialized by Jackson.
  */
 import {
-  AccessMethod, AdjustmentType, AvailabilityStatus, BookingSource, CheckInStatus, CheckOutStatus,
+  AccessMethod, AvailabilityStatus, BookingSource, CheckInStatus, CheckOutStatus,
   ChecklistCategory, ChecklistStatus, GuestStatus, HousekeeperStatus, MaintenanceCategory, MaintenancePriority,
   MaintenanceStatus, NotificationCategory, NotificationStatus, PayoutStatus, PreventiveFrequency,
-  PreventiveStatus, PricingRuleStatus, PricingRuleType, PropertyStatus, PropertyType, ReportedByType,
+  PreventiveStatus, PropertyStatus, PropertyType, ReportedByType,
   ReservationStatus, ReviewStatus, StatementStatus, TurnoverStatus, UserRole, UserStatus, VerificationStatus,
 } from './enums';
 
@@ -160,6 +160,10 @@ export interface OwnerStatementResponse extends HasId {
   netPayout?: number;
   generatedDate?: string;
   status: StatementStatus;
+  /** The owner's approve/reject comment — usually why they rejected it. */
+  ownerNote?: string;
+  /** When the owner answered; absent while the statement still awaits them. */
+  decidedDate?: string;
 }
 
 // ---- Property ----
@@ -186,16 +190,6 @@ export interface AvailabilityCalendarResponse extends HasId {
   basePrice: number;
   minimumNights: number;
   lastUpdated?: string;
-}
-
-export interface PricingRuleResponse extends HasId {
-  propertyId: number;
-  ruleType: PricingRuleType;
-  startDate?: string;
-  endDate?: string;
-  adjustment: AdjustmentType;
-  adjustmentValue: number;
-  status: PricingRuleStatus;
 }
 
 // ---- Notification ----

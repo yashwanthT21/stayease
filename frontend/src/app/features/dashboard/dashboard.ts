@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, OnInit, computed, inject } from '@a
 import { Router, RouterLink } from '@angular/router';
 import { LowerCasePipe } from '@angular/common';
 import { AuthService } from '../../core/auth/auth.service';
-import { NAV_GROUP_ORDER, RESOURCES } from '../../core/registry';
+import { NAV_GROUP_ORDER, RESOURCES, canRoleUseResource } from '../../core/registry';
 import { ResourceConfig } from '../../shared/crud/resource-config';
 import { UserRole } from '../../core/models/enums';
 import { LabelizePipe } from '../../shared/pipes/labelize.pipe';
@@ -48,7 +48,10 @@ export class DashboardComponent implements OnInit {
   });
 
   protected readonly groups = computed<NavGroup[]>(() => {
-    const visible = RESOURCES.filter((r) => this.auth.hasAnyRole(r.roles));
+    // Same allowlist the sidebar uses, so the module grid can't offer a
+    // housekeeper or financier a screen their nav deliberately hides.
+    const role = this.auth.role();
+    const visible = RESOURCES.filter((r) => this.auth.hasAnyRole(r.roles) && canRoleUseResource(role, r.key));
     const out: NavGroup[] = [];
     for (const name of NAV_GROUP_ORDER) {
       const items = visible.filter((r) => r.group === name);

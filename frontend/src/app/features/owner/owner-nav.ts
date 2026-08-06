@@ -13,7 +13,11 @@ export interface OwnerNavItem {
   desc: string;
 }
 
-/** The six owner modules, in the order the brief lists them. */
+/**
+ * The owner modules, in the order the brief lists them, plus the shared
+ * notifications inbox — an owner is notified when a guest reviews one of their
+ * properties, so they need somewhere to read it.
+ */
 export const OWNER_NAV: OwnerNavItem[] = [
   { path: '/owner/listings', title: 'Property Listing', icon: 'bi-building', desc: 'Browse how each of your properties appears to guests.' },
   { path: '/owner/properties', title: 'Listing Manager', icon: 'bi-houses', desc: 'Add, edit, publish and unpublish your properties.' },
@@ -21,4 +25,5 @@ export const OWNER_NAV: OwnerNavItem[] = [
   { path: '/owner/bookings', title: 'Booking Summary', icon: 'bi-journal-check', desc: 'Track reservations, revenue and upcoming stays.' },
   { path: '/owner/payouts', title: 'Payout Statement', icon: 'bi-cash-coin', desc: 'Review your monthly statements and payouts.' },
   { path: '/owner/reviews', title: 'Review Analytics', icon: 'bi-star', desc: 'Understand guest satisfaction across your portfolio.' },
+  { path: '/notifications', title: 'Notifications', icon: 'bi-bell', desc: 'New reviews, listings and other updates on your properties.' },
 ];

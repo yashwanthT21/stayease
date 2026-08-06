@@ -12,9 +12,10 @@
       @if (!embedded()) {
         <div class="d-flex align-items-center gap-2">
           <label class="text-muted small mb-0">Property</label>
-          <select class="form-select form-select-sm" style="min-width: 240px" (change)="onSelectProperty($event)">
+          <select class="form-select form-select-sm" style="min-width: 240px"
+                  [seSelectValue]="selectedId() ?? ''" (seSelectValueChange)="onSelectProperty($event)">
             @for (p of properties(); track p.id) {
-              <option [value]="p.id" [selected]="p.id === selectedId()">{{ p.title }} · {{ p.city }}</option>
+              <option [value]="p.id">{{ p.title }} · {{ p.city }}</option>
             }
           </select>
         </div>
@@ -38,11 +39,11 @@
         <span><span class="se-cal-dot se-cal-blocked"></span> Blocked <span class="text-muted">({{ summary()['BLOCKED'] }})</span></span>
         <span><span class="se-cal-dot se-cal-owner_use"></span> Owner use <span class="text-muted">({{ summary()['OWNER_USE'] }})</span></span>
         @if (!readOnly()) {
-          <span class="text-muted ms-auto"><i class="bi bi-hand-index me-1"></i>Click a day — or drag across several — to set price &amp; status.</span>
+          <span class="text-muted ms-auto"><i class="bi bi-hand-index me-1"></i>Click a day from today onwards — or drag across several — to set price &amp; status. Past days are locked.</span>
         } @else if (selectable()) {
-          <span class="text-muted ms-auto"><i class="bi bi-hand-index me-1"></i>Tap green days to fill your check-in and check-out.</span>
+          <span class="text-muted ms-auto"><i class="bi bi-hand-index me-1"></i>Tap green days from today onwards to fill your check-in and check-out.</span>
         } @else {
-          <span class="text-muted ms-auto">Green days are available to book.</span>
+          <span class="text-muted ms-auto">Green days from today onwards are available to book.</span>
         }
       </div>
 
@@ -56,8 +57,12 @@
           <div class="se-cal-grid">
             @for (cell of week; track $index) {
               @if (cell) {
+                <!-- Past days are disabled outright, so neither a manager/owner
+                     editing nor a guest picking dates can reach them. -->
                 <button type="button" class="se-cal-cell {{ cellClass(cell) }}"
                         [class.se-cal-static]="readOnly() && !selectable()" [class.se-cal-selected]="isSelected(cell.date)"
+                        [disabled]="isPast(cell.date)"
+                        [title]="isPast(cell.date) ? 'Past day — cannot be changed or booked' : ''"
                         (click)="openDay(cell)" (mousedown)="onCellMouseDown(cell)" (mouseenter)="onCellMouseEnter(cell)">
                   <span class="se-cal-day">{{ cell.day }}</span>
                   @if (cell.entry) {
@@ -85,8 +90,8 @@
       <div class="modal-body">
         <div class="mb-3">
           <label class="form-label">Status</label>
-          <select class="form-select" (change)="onStatusChange($event)">
-            @for (s of statuses; track s) { <option [value]="s" [selected]="selectedStatus() === s">{{ s | labelize }}</option> }
+          <select class="form-select" [seSelectValue]="selectedStatus()" (seSelectValueChange)="onStatusChange($event)">
+            @for (s of statuses; track s) { <option [value]="s">{{ s | labelize }}</option> }
           </select>
         </div>
         <div class="mb-1">
@@ -113,8 +118,8 @@
       <p class="text-muted small mb-3"><i class="bi bi-calendar-check me-1"></i>Applying to <strong>{{ selectedDates().size }}</strong> selected day(s).</p>
       <div class="mb-3">
         <label class="form-label">Status</label>
-        <select class="form-select" (change)="onBulkStatus($event)">
-          @for (s of statuses; track s) { <option [value]="s" [selected]="bulkStatus() === s">{{ s | labelize }}</option> }
+        <select class="form-select" [seSelectValue]="bulkStatus()" (seSelectValueChange)="onBulkStatus($event)">
+          @for (s of statuses; track s) { <option [value]="s">{{ s | labelize }}</option> }
         </select>
       </div>
       <div class="mb-1">

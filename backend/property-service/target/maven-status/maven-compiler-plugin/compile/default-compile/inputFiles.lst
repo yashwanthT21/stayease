@@ -2,16 +2,16 @@ C:\Users\2506580\Downloads\stayease\backend\property-service\src\main\java\com\s
 C:\Users\2506580\Downloads\stayease\backend\property-service\src\main\java\com\stayease\common\exception\ErrorResponse.java
 C:\Users\2506580\Downloads\stayease\backend\property-service\src\main\java\com\stayease\common\exception\GlobalExceptionHandler.java
 C:\Users\2506580\Downloads\stayease\backend\property-service\src\main\java\com\stayease\common\exception\ResourceNotFoundException.java
+C:\Users\2506580\Downloads\stayease\backend\property-service\src\main\java\com\stayease\property\client\FeignClientConfig.java
 C:\Users\2506580\Downloads\stayease\backend\property-service\src\main\java\com\stayease\property\client\NotificationClient.java
 C:\Users\2506580\Downloads\stayease\backend\property-service\src\main\java\com\stayease\property\client\NotificationCreateRequest.java
-C:\Users\2506580\Downloads\stayease\backend\property-service\src\main\java\com\stayease\property\config\RestClientConfig.java
+C:\Users\2506580\Downloads\stayease\backend\property-service\src\main\java\com\stayease\property\client\NotificationFeignClient.java
+C:\Users\2506580\Downloads\stayease\backend\property-service\src\main\java\com\stayease\property\client\UserClient.java
+C:\Users\2506580\Downloads\stayease\backend\property-service\src\main\java\com\stayease\property\client\UserFeignClient.java
 C:\Users\2506580\Downloads\stayease\backend\property-service\src\main\java\com\stayease\property\controller\AvailabilityCalendarController.java
-C:\Users\2506580\Downloads\stayease\backend\property-service\src\main\java\com\stayease\property\controller\PricingRuleController.java
 C:\Users\2506580\Downloads\stayease\backend\property-service\src\main\java\com\stayease\property\controller\PropertyController.java
 C:\Users\2506580\Downloads\stayease\backend\property-service\src\main\java\com\stayease\property\dto\AvailabilityCalendarRequest.java
 C:\Users\2506580\Downloads\stayease\backend\property-service\src\main\java\com\stayease\property\dto\AvailabilityCalendarResponse.java
-C:\Users\2506580\Downloads\stayease\backend\property-service\src\main\java\com\stayease\property\dto\PricingRuleRequest.java
-C:\Users\2506580\Downloads\stayease\backend\property-service\src\main\java\com\stayease\property\dto\PricingRuleResponse.java
 C:\Users\2506580\Downloads\stayease\backend\property-service\src\main\java\com\stayease\property\dto\PropertyRequest.java
 C:\Users\2506580\Downloads\stayease\backend\property-service\src\main\java\com\stayease\property\dto\PropertyResponse.java
 C:\Users\2506580\Downloads\stayease\backend\property-service\src\main\java\com\stayease\property\entity\AvailabilityCalendar.java
@@ -24,7 +24,6 @@ C:\Users\2506580\Downloads\stayease\backend\property-service\src\main\java\com\s
 C:\Users\2506580\Downloads\stayease\backend\property-service\src\main\java\com\stayease\property\enums\PropertyStatus.java
 C:\Users\2506580\Downloads\stayease\backend\property-service\src\main\java\com\stayease\property\enums\PropertyType.java
 C:\Users\2506580\Downloads\stayease\backend\property-service\src\main\java\com\stayease\property\mapper\AvailabilityCalendarMapper.java
-C:\Users\2506580\Downloads\stayease\backend\property-service\src\main\java\com\stayease\property\mapper\PricingRuleMapper.java
 C:\Users\2506580\Downloads\stayease\backend\property-service\src\main\java\com\stayease\property\mapper\PropertyMapper.java
 C:\Users\2506580\Downloads\stayease\backend\property-service\src\main\java\com\stayease\property\PropertyServiceApplication.java
 C:\Users\2506580\Downloads\stayease\backend\property-service\src\main\java\com\stayease\property\repository\AvailabilityCalendarRepository.java
@@ -32,7 +31,5 @@ C:\Users\2506580\Downloads\stayease\backend\property-service\src\main\java\com\s
 C:\Users\2506580\Downloads\stayease\backend\property-service\src\main\java\com\stayease\property\repository\PropertyRepository.java
 C:\Users\2506580\Downloads\stayease\backend\property-service\src\main\java\com\stayease\property\service\AvailabilityCalendarService.java
 C:\Users\2506580\Downloads\stayease\backend\property-service\src\main\java\com\stayease\property\service\AvailabilityCalendarServiceImpl.java
-C:\Users\2506580\Downloads\stayease\backend\property-service\src\main\java\com\stayease\property\service\PricingRuleService.java
-C:\Users\2506580\Downloads\stayease\backend\property-service\src\main\java\com\stayease\property\service\PricingRuleServiceImpl.java
 C:\Users\2506580\Downloads\stayease\backend\property-service\src\main\java\com\stayease\property\service\PropertyService.java
 C:\Users\2506580\Downloads\stayease\backend\property-service\src\main\java\com\stayease\property\service\PropertyServiceImpl.java

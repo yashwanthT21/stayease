@@ -8,13 +8,15 @@
       <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
       <input type="text" class="form-control" placeholder="Search property, category, status…" (input)="onSearch($event)" />
     </div>
-    <select class="form-select form-select-sm" style="max-width: 220px" (change)="onPropertyFilter($event)">
+    <select class="form-select form-select-sm" style="max-width: 220px"
+            [seSelectValue]="propertyFilter()" (seSelectValueChange)="onPropertyFilter($event)">
       <option value="">All properties</option>
       @for (p of properties(); track p.id) {
         <option [value]="p.id">{{ p.title }}</option>
       }
     </select>
-    <select class="form-select form-select-sm" style="max-width: 180px" (change)="onStatusFilter($event)">
+    <select class="form-select form-select-sm" style="max-width: 180px"
+            [seSelectValue]="statusFilter()" (seSelectValueChange)="onStatusFilter($event)">
       <option value="">All statuses</option>
       @for (s of statuses; track s) {
         <option [value]="s">{{ s | labelize }}</option>
@@ -49,7 +51,10 @@
               <td class="fw-semibold">{{ propertyTitle(m.propertyId) }}</td>
               <td>{{ m.category | labelize }}</td>
               <td><span class="badge {{ priorityBadge(m.priority) }}">{{ m.priority | labelize }}</span></td>
-              <td>{{ m.reportedByType | labelize }}</td>
+              <td>
+                <div>{{ userName(m.reportedById) }}</div>
+                <div class="small text-body-secondary">{{ m.reportedByType | labelize }}</div>
+              </td>
               <td class="text-nowrap">{{ fmtDateTime(m.reportedDate) }}</td>
               <td class="text-end">{{ money(m.amountSpent) }}</td>
               <td><span class="badge {{ statusBadge(m.status) }}">{{ m.status | labelize }}</span></td>
@@ -73,36 +78,85 @@
         <div class="row g-3">
           <div class="col-md-6">
             <label class="form-label">Property <span class="text-danger">*</span></label>
-            <select class="form-select" [class.is-invalid]="propertyMissing()" (change)="onProperty($event)">
-              <option value="" [selected]="selectedPropertyId() === null">— Select a property —</option>
+            <select class="form-select" [class.is-invalid]="propertyMissing()"
+                    [seSelectValue]="selectedPropertyId() ?? ''" (seSelectValueChange)="onProperty($event)">
+              <option value="">— Select a property —</option>
               @for (p of properties(); track p.id) {
-                <option [value]="p.id" [selected]="selectedPropertyId() === p.id">{{ p.title }} · {{ p.city }}</option>
+                <option [value]="p.id">{{ p.title }} · {{ p.city }}</option>
               }
             </select>
             <div class="invalid-feedback">A property is required.</div>
             @if (properties().length === 0) { <div class="form-text">No properties available.</div> }
           </div>
+          <!-- Reported by: type-to-search over the user directory, so nobody has
+               to know a raw user id. -->
           <div class="col-md-6">
-            <label class="form-label">Reported by (user id) <span class="text-danger">*</span></label>
-            <input type="number" min="1" class="form-control" formControlName="reportedById" [class.is-invalid]="invalid('reportedById')" />
-            <div class="invalid-feedback">A reporter id is required.</div>
+            <label class="form-label" for="reportedBy">Reported by <span class="text-danger">*</span></label>
+            <div class="position-relative">
+              <div class="input-group">
+                <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
+                <input id="reportedBy" type="text" class="form-control" autocomplete="off"
+                       placeholder="Search a person by name or email…"
+                       [class.is-invalid]="reportedByMissing()"
+                       [value]="reporterQuery()"
+                       (input)="onReporterSearch($event)"
+                       (focus)="openReporterList()"
+                       (blur)="closeReporterList()" />
+                @if (reporterQuery()) {
+                  <button type="button" class="btn btn-outline-secondary" title="Clear" (click)="clearReporter()">
+                    <i class="bi bi-x-lg"></i>
+                  </button>
+                }
+              </div>
+
+              @if (reporterOpen()) {
+                <div class="list-group position-absolute w-100 shadow-sm" style="z-index: 5; max-height: 15rem; overflow-y: auto">
+                  @if (reporterMatches().length === 0) {
+                    <div class="list-group-item text-muted small">
+                      @if (users().length === 0) { No user directory available. } @else { No one matches “{{ reporterQuery() }}”. }
+                    </div>
+                  } @else {
+                    @for (u of reporterMatches(); track u.id) {
+                      <button type="button" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center"
+                              [class.active]="selectedReporterId() === u.id"
+                              (mousedown)="pickReporter(u)">
+                        <span>
+                          <span class="fw-semibold">{{ u.name }}</span>
+                          <span class="small d-block text-body-secondary">{{ u.email }}</span>
+                        </span>
+                        <span class="badge text-bg-light border ms-2">{{ u.role | labelize }}</span>
+                      </button>
+                    }
+                  }
+                </div>
+              }
+            </div>
+            @if (selectedReporter(); as picked) {
+              <div class="form-text text-success"><i class="bi bi-check-circle me-1"></i>{{ picked.name }} · {{ picked.email }}</div>
+            } @else if (reportedByMissing()) {
+              <div class="text-danger small mt-1">Pick the person who reported this issue.</div>
+            } @else {
+              <div class="form-text">Start typing, then pick a person from the list.</div>
+            }
           </div>
           <div class="col-md-6">
             <label class="form-label">Reporter type <span class="text-danger">*</span></label>
-            <select class="form-select" [class.is-invalid]="reporterMissing()" (change)="onReporterType($event)">
-              <option value="" [selected]="selectedReporterType() === ''">— Select —</option>
+            <select class="form-select" [class.is-invalid]="reporterMissing()"
+                    [seSelectValue]="selectedReporterType()" (seSelectValueChange)="onReporterType($event)">
+              <option value="">— Select —</option>
               @for (t of reporterTypes; track t) {
-                <option [value]="t" [selected]="selectedReporterType() === t">{{ t | labelize }}</option>
+                <option [value]="t">{{ t | labelize }}</option>
               }
             </select>
             <div class="invalid-feedback">Choose a reporter type.</div>
           </div>
           <div class="col-md-6">
             <label class="form-label">Category <span class="text-danger">*</span></label>
-            <select class="form-select" [class.is-invalid]="categoryMissing()" (change)="onCategory($event)">
-              <option value="" [selected]="selectedCategory() === ''">— Select —</option>
+            <select class="form-select" [class.is-invalid]="categoryMissing()"
+                    [seSelectValue]="selectedCategory()" (seSelectValueChange)="onCategory($event)">
+              <option value="">— Select —</option>
               @for (c of categories; track c) {
-                <option [value]="c" [selected]="selectedCategory() === c">{{ c | labelize }}</option>
+                <option [value]="c">{{ c | labelize }}</option>
               }
             </select>
             <div class="invalid-feedback">Choose a category.</div>
@@ -113,9 +167,9 @@
           </div>
           <div class="col-md-6">
             <label class="form-label">Priority</label>
-            <select class="form-select" (change)="onPriority($event)">
+            <select class="form-select" [seSelectValue]="selectedPriority()" (seSelectValueChange)="onPriority($event)">
               @for (p of priorities; track p) {
-                <option [value]="p" [selected]="selectedPriority() === p">{{ p | labelize }}</option>
+                <option [value]="p">{{ p | labelize }}</option>
               }
             </select>
             <div class="form-text">Defaults to Medium.</div>
@@ -131,16 +185,16 @@
           <div class="col-md-6">
             <label class="form-label">Amount spent</label>
             <div class="input-group">
-              <span class="input-group-text">$</span>
+              <span class="input-group-text">&#8377;</span>
               <input type="number" min="0" step="0.01" class="form-control" formControlName="amountSpent" placeholder="0.00" />
             </div>
             <div class="form-text">Repair cost logged on resolution; feeds the owner statement.</div>
           </div>
           <div class="col-md-6">
             <label class="form-label">Status</label>
-            <select class="form-select" (change)="onStatus($event)">
+            <select class="form-select" [seSelectValue]="selectedStatus()" (seSelectValueChange)="onStatus($event)">
               @for (s of statuses; track s) {
-                <option [value]="s" [selected]="selectedStatus() === s">{{ s | labelize }}</option>
+                <option [value]="s">{{ s | labelize }}</option>
               }
             </select>
             <div class="form-text">Defaults to Open.</div>

@@ -1,0 +1,4 @@
+-------------------------------------------------------------------------------
+Test set: com.stayease.property.service.AvailabilityCalendarServiceImplTest
+-------------------------------------------------------------------------------
+Tests run: 10, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 7.586 s -- in com.stayease.property.service.AvailabilityCalendarServiceImplTest

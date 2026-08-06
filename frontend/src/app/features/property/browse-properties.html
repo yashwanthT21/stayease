@@ -27,8 +27,45 @@
       <i class="bi bi-houses fs-1 d-block mb-2"></i>No properties are available for booking right now.
     </div></div>
   } @else {
+    <!-- One box searches name AND city: a guest looking for "Kochi" and one
+         looking for "Sea Breeze" both just type it. -->
+    <div class="card shadow-sm border-0 mb-3">
+      <div class="card-body py-3">
+        <div class="row g-2 align-items-center">
+          <div class="col-md-7 col-lg-5">
+            <div class="input-group">
+              <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
+              <input type="search" class="form-control" placeholder="Search by property name or location…"
+                     [value]="search()" (input)="onSearch($event)" aria-label="Search properties by name or location" />
+              @if (search()) {
+                <button class="btn btn-outline-secondary" type="button" title="Clear search" (click)="clearSearch()">
+                  <i class="bi bi-x-lg"></i>
+                </button>
+              }
+            </div>
+          </div>
+          @if (search()) {
+            <div class="col-md-5 col-lg-7 text-md-end">
+              <small class="text-muted">
+                {{ visibleProperties().length }} of {{ properties().length }} match “{{ search() }}”
+              </small>
+            </div>
+          }
+        </div>
+      </div>
+    </div>
+  }
+
+  @if (!loading() && properties().length > 0) {
+    @if (visibleProperties().length === 0) {
+      <div class="card shadow-sm border-0"><div class="card-body text-center text-muted py-5">
+        <i class="bi bi-search fs-1 d-block mb-2"></i>
+        No properties match “{{ search() }}”.
+        <div class="mt-2"><button class="btn btn-sm btn-outline-primary" (click)="clearSearch()">Clear search</button></div>
+      </div></div>
+    } @else {
     <div class="row g-3">
-      @for (p of properties(); track p.id) {
+      @for (p of visibleProperties(); track p.id) {
         <div class="col-sm-6 col-xl-4">
           <div class="card se-owner-listing shadow-sm h-100 se-owner-tile cursor-pointer" (click)="pick(p)">
             <div class="se-owner-listing-cover d-flex align-items-center justify-content-center">
@@ -53,6 +90,7 @@
         </div>
       }
     </div>
+    }
   }
 } @else {
   <!-- Detail + booking -->
@@ -83,20 +121,37 @@
         <div class="card-body">
           <form [formGroup]="form" (ngSubmit)="requestBooking()">
             <div class="row g-2 mb-3">
+              <!-- min=today: a stay can't start (or end) on a day that has passed. -->
               <div class="col-6">
                 <label class="form-label">Check-in</label>
-                <input type="date" class="form-control" formControlName="checkInDate" [class.is-invalid]="triedSubmit() && form.get('checkInDate')?.invalid" />
+                <input type="date" class="form-control" formControlName="checkInDate" [min]="today()" [class.is-invalid]="triedSubmit() && form.get('checkInDate')?.invalid" />
               </div>
               <div class="col-6">
                 <label class="form-label">Check-out</label>
-                <input type="date" class="form-control" formControlName="checkOutDate" [class.is-invalid]="triedSubmit() && form.get('checkOutDate')?.invalid" />
+                <input type="date" class="form-control" formControlName="checkOutDate" [min]="today()" [class.is-invalid]="triedSubmit() && form.get('checkOutDate')?.invalid" />
               </div>
             </div>
             <div class="mb-3">
-              <label class="form-label">Guests</label>
-              <input type="number" min="1" class="form-control" formControlName="guestCount" />
+              <label class="form-label">
+                Guests
+                @if (maxGuests() !== null) {
+                  <small class="text-muted fw-normal">(sleeps up to {{ maxGuests() }})</small>
+                }
+              </label>
+              <!-- max is set so the browser's own stepper stops at capacity too;
+                   the validator is what actually blocks a typed-in number. -->
+              <input type="number" min="1" [max]="maxGuests()" class="form-control"
+                     formControlName="guestCount" [class.is-invalid]="tooManyGuests()" />
+              @if (tooManyGuests()) {
+                <div class="invalid-feedback d-block">
+                  <i class="bi bi-exclamation-triangle me-1"></i>
+                  This property sleeps at most {{ maxGuests() }} guest{{ maxGuests() === 1 ? '' : 's' }}. Please lower the number or pick a larger place.
+                </div>
+              }
             </div>
-            <button type="submit" class="btn btn-primary w-100" [disabled]="submitting()">
+            <!-- Blocked while over capacity: the request would only be rejected
+                 later, and the inline error above already says why. -->
+            <button type="submit" class="btn btn-primary w-100" [disabled]="submitting() || tooManyGuests()">
               @if (submitting()) { <span class="spinner-border spinner-border-sm me-1"></span> }
               Request booking
             </button>

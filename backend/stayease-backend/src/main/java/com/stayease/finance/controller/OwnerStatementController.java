@@ -1,5 +1,6 @@
 package com.stayease.finance.controller;
 
+import com.stayease.finance.dto.OwnerStatementDecisionRequest;
 import com.stayease.finance.dto.OwnerStatementRequest;
 import com.stayease.finance.dto.OwnerStatementResponse;
 import com.stayease.finance.service.OwnerStatementService;
@@ -8,6 +9,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -49,6 +51,33 @@ public class OwnerStatementController {
     public ResponseEntity<OwnerStatementResponse> update(
             @PathVariable Long id, @Valid @RequestBody OwnerStatementRequest request) {
         return ResponseEntity.ok(service.update(id, request));
+    }
+
+    /**
+     * PATCH /api/owner-statements/{id}/approve — the OWNER accepts the figures.
+     *
+     * This is the gate on the money: until it has been called, POST
+     * /api/owner-statements/../payouts is refused. The body (an optional note) is
+     * itself optional, so an owner can approve with a bare PATCH.
+     */
+    @PatchMapping("/{id}/approve")
+    public ResponseEntity<OwnerStatementResponse> approve(
+            @PathVariable Long id,
+            @Valid @RequestBody(required = false) OwnerStatementDecisionRequest request) {
+        return ResponseEntity.ok(service.approve(id, request));
+    }
+
+    /**
+     * PATCH /api/owner-statements/{id}/reject — the OWNER disputes the figures.
+     *
+     * A reason is required (the service rejects a blank one): it's what Finance
+     * gets notified with and works from when re-issuing.
+     */
+    @PatchMapping("/{id}/reject")
+    public ResponseEntity<OwnerStatementResponse> reject(
+            @PathVariable Long id,
+            @Valid @RequestBody(required = false) OwnerStatementDecisionRequest request) {
+        return ResponseEntity.ok(service.reject(id, request));
     }
 
     @DeleteMapping("/{id}")

@@ -8,6 +8,15 @@ import { PROPERTY_STATUSES, PROPERTY_TYPES } from '../../core/models/enums';
 import { LabelizePipe } from '../../shared/pipes/labelize.pipe';
 import { OwnerPageHeaderComponent } from '../../shared/ui/owner-page-header';
 import { OwnerDialogComponent } from '../../shared/ui/owner-dialog';
+import { SelectValueDirective } from '../../shared/ui/select-value';
+
+/**
+ * Standard Indian hotel timings: guests may check in from 2:00 PM and must check
+ * out by 11:00 AM. Offered as a one-click default so an owner listing a property
+ * doesn't have to key the usual values in every time.
+ */
+export const DEFAULT_CHECK_IN_TIME = '14:00';
+export const DEFAULT_CHECK_OUT_TIME = '11:00';
 
 /**
  * The owner's property CRUD screen. Identical contract to the generic resource
@@ -18,7 +27,7 @@ import { OwnerDialogComponent } from '../../shared/ui/owner-dialog';
 @Component({
   selector: 'app-owner-property-manager',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ReactiveFormsModule, LabelizePipe, OwnerPageHeaderComponent, OwnerDialogComponent],
+  imports: [ReactiveFormsModule, LabelizePipe, OwnerPageHeaderComponent, OwnerDialogComponent, SelectValueDirective],
   templateUrl: './property-manager.html',
 })
 export class PropertyManagerComponent {
@@ -51,6 +60,16 @@ export class PropertyManagerComponent {
   // form keeps the default (e.g. a "Listed" pick saving as UNLISTED).
   protected readonly selectedType = signal<string>('APARTMENT');
   protected readonly selectedStatus = signal<string>('UNLISTED');
+
+  /**
+   * Check-in / check-out times are either the standard Indian hotel timings
+   * (2:00 PM → 11:00 AM) or picked by hand. Only drives which choice the UI
+   * highlights — the values themselves always live in the form controls, so the
+   * payload is built the same way either way.
+   */
+  protected readonly stayTimeMode = signal<'DEFAULT' | 'CUSTOM'>('DEFAULT');
+  protected readonly defaultCheckInTime = DEFAULT_CHECK_IN_TIME;
+  protected readonly defaultCheckOutTime = DEFAULT_CHECK_OUT_TIME;
 
   protected form: FormGroup = this.buildForm();
 
@@ -108,6 +127,9 @@ export class PropertyManagerComponent {
     this.selectedType.set('APARTMENT');
     this.selectedStatus.set('UNLISTED');
     this.form = this.buildForm();
+    // A brand-new listing starts on the standard timings; the owner can switch
+    // to "Set manually" (or just edit either time) to override them.
+    this.useDefaultStayTimes();
     this.modalOpen.set(true);
   }
 
@@ -117,20 +139,52 @@ export class PropertyManagerComponent {
     this.selectedType.set(row.type);
     this.selectedStatus.set(row.status);
     this.form = this.buildForm(row);
+    this.stayTimeMode.set(this.matchesDefaultStayTimes() ? 'DEFAULT' : 'CUSTOM');
     this.modalOpen.set(true);
   }
 
-  protected onManagerChange(event: Event): void {
-    const raw = (event.target as HTMLSelectElement).value;
-    this.selectedManagerId.set(raw ? Number(raw) : null);
+  // ---- check-in / check-out timings ----
+
+  /** One-click standard Indian hotel timings: check in 2:00 PM, check out 11:00 AM. */
+  protected useDefaultStayTimes(): void {
+    this.form.patchValue({
+      checkInTime: DEFAULT_CHECK_IN_TIME,
+      checkOutTime: DEFAULT_CHECK_OUT_TIME,
+    });
+    this.stayTimeMode.set('DEFAULT');
   }
 
-  protected onTypeChange(event: Event): void {
-    this.selectedType.set((event.target as HTMLSelectElement).value);
+  /** Hand the times back to the owner (values are left as-is to edit from). */
+  protected useCustomStayTimes(): void {
+    this.stayTimeMode.set('CUSTOM');
   }
 
-  protected onStatusChange(event: Event): void {
-    this.selectedStatus.set((event.target as HTMLSelectElement).value);
+  /** Editing either time directly counts as choosing custom timings. */
+  protected onStayTimeEdited(): void {
+    this.stayTimeMode.set(this.matchesDefaultStayTimes() ? 'DEFAULT' : 'CUSTOM');
+  }
+
+  private matchesDefaultStayTimes(): boolean {
+    return (
+      this.form.get('checkInTime')?.value === DEFAULT_CHECK_IN_TIME &&
+      this.form.get('checkOutTime')?.value === DEFAULT_CHECK_OUT_TIME
+    );
+  }
+
+  // These three selects are driven through SelectValueDirective, which re-asserts
+  // the signal's value onto the element after every render — so a choice survives
+  // the managers list resolving after the modal opened, and no longer silently
+  // reverts to the first option while the signal still holds the real pick.
+  protected onManagerChange(value: string): void {
+    this.selectedManagerId.set(value ? Number(value) : null);
+  }
+
+  protected onTypeChange(value: string): void {
+    this.selectedType.set(value);
+  }
+
+  protected onStatusChange(value: string): void {
+    this.selectedStatus.set(value);
   }
 
   protected closeModal(): void {

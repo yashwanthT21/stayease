@@ -36,7 +36,7 @@ place — this also avoids browser CORS in development:
 
 | Prefix | Target |
 |---|---|
-| `/api/properties`, `/api/availability`, `/api/pricing-rules`, `/api/notifications`, `/api/auth` | **api-gateway** |
+| `/api/properties`, `/api/availability`, `/api/notifications`, `/api/auth` | **api-gateway** |
 | everything else under `/api` | **stayease-backend monolith** (`:8085`) |
 
 > ⚠️ **Gateway port.** `proxy.conf.js` defaults the gateway to

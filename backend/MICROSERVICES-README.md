@@ -24,16 +24,49 @@ are unchanged.
         │ property-service :8081    │  │ notification-service :8082    │
         │ DB: stayease_property     │  │ DB: stayease_notification     │
         └─────────────┬─────────────┘  └──────────────▲───────────────┘
-                      │  http://notification-service (RestClient + LB)
-                      └───────────────────────────────┘   "property created" notice
+                      │  @FeignClient("notification-service")
+                      └───────────────────────────────┘   "property created",
+                                                          "manager assigned"
 
         all four register with ──▶  eureka-server :8761
 
    monolith stayease-backend :8085 is now ALSO a eureka client — booking/
-   housekeeping/maintenance call property-service (http://property-service) to
-   validate a propertyId. The gateway also statically proxies /api/auth/** to the
-   monolith so you can log in and get a token.
+   housekeeping/maintenance call property-service to validate a propertyId, and
+   property-service calls BACK into the monolith's IAM (@FeignClient("stayease-
+   backend")) to name a user in a notification. The gateway also statically
+   proxies /api/auth/** to the monolith so you can log in and get a token.
 ```
+
+## Inter-service calls: OpenFeign
+
+Every outbound call between services is a **declarative `@FeignClient`
+interface** — the HTTP verb, path and body live in the method signature, and
+Spring Cloud LoadBalancer resolves the `name` from Eureka, so no code names a
+host or port.
+
+| Caller | Client interface | Target |
+|---|---|---|
+| monolith | `PropertyFeignClient` | `property-service` |
+| monolith | `NotificationFeignClient` | `notification-service` |
+| property-service | `NotificationFeignClient` | `notification-service` |
+| property-service | `UserFeignClient` | `stayease-backend` (IAM) |
+
+Each Feign interface is paired with a plain `@Component` wrapper
+(`PropertyClient`, `NotificationClient`, `UserClient`) that owns the **policy**:
+which failures are fatal, which mean "treat as absent", and how several calls
+combine into one business operation. The interface fails loudly; the wrapper
+decides what that means. Callers inject the wrapper, never the Feign proxy.
+
+To pin a client to a fixed address (an environment without Eureka), set
+`spring.cloud.openfeign.client.config.<service-name>.url`.
+
+**Identity propagation.** IAM is the one target that requires a JWT.
+property-service's `FeignClientConfig` registers a `RequestInterceptor` that
+copies the incoming request's `Authorization` header onto the outbound call, so
+the lookup runs with exactly the permissions the human caller already had — no
+service credential to manage. When there is no header to copy (a background
+thread, or a call that bypassed the gateway) the lookup simply fails and the
+caller degrades gracefully.
 
 ## Versions
 
@@ -44,6 +77,7 @@ are unchanged.
 | Spring Cloud       | 2025.1.2 (**Oakwood** — the train for Boot 4.0.x) |
 | Gateway starter    | `spring-cloud-starter-gateway-server-webflux` |
 | Registry           | `spring-cloud-starter-netflix-eureka-{server,client}` |
+| Inter-service HTTP | `spring-cloud-starter-openfeign`           |
 | DB                 | MySQL 8                                    |
 
 ## Prerequisites
@@ -113,10 +147,13 @@ Per-service Swagger UIs: <http://localhost:8081/swagger-ui.html> (property),
 
 ## Endpoints
 
-**property-service** (routed via `/api/properties`, `/api/availability`, `/api/pricing-rules`)
+**property-service** (routed via `/api/properties`, `/api/availability`)
 - `POST/GET/GET{id}/PUT{id}/DELETE{id} /api/properties` (`?ownerId=` filter on list)
-- `POST/GET/GET{id}/PUT{id}/DELETE{id} /api/availability` (`?propertyId=` required on list)
-- `POST/GET/GET{id}/PUT{id}/DELETE{id} /api/pricing-rules` (`?propertyId=` required on list)
+- `POST/GET/GET{id}/PUT{id}/DELETE{id} /api/availability` (`?propertyId=` required on list).
+  Dates before today are rejected with a 400 — availability is set from today forward.
+
+> `/api/pricing-rules` was removed: no client ever called it. The `pricing_rules`
+> table and its entity remain only so deleting a property cleans up its old rows.
 
 **notification-service** (routed via `/api/notifications`)
 - `POST/GET/GET{id}/PUT{id}/DELETE{id} /api/notifications` (`?userId=` and/or `?status=` filter on list)
@@ -142,8 +179,24 @@ Per-service Swagger UIs: <http://localhost:8081/swagger-ui.html> (property),
 - **Notification mark-read / dismiss** — lightweight `PATCH` transitions instead
   of forcing a full-body `PUT` just to flip a status.
 - **Property → owner notification on creation** — the realistic cross-service
-  side effect, and the demo's inter-service call (Eureka + load-balanced
-  `RestClient`). Best-effort: a notification outage never fails property creation.
+  side effect, and the demo's inter-service call (Eureka + OpenFeign).
+  Best-effort: a notification outage never fails property creation.
+- **Owner → manager assignment notification** — assigning a `managerId` to a
+  property tells THAT manager the property is now theirs, naming the owner who
+  handed it over (`"You have been assigned to \"Sea Breeze Villa\" by Ada
+  Owner."`). Fires on create and update, but only when the assignment actually
+  changed, so editing an unrelated field doesn't nag the manager. The owner's name
+  comes from a second inter-service call into IAM; if it fails the message still
+  goes out, worded "by the owner".
+- **Manager ⇄ housekeeper turnover handover** (monolith, housekeeping module) —
+  the two never talk directly, so the notifications *are* the handover:
+  assigning a turnover tells the housekeeper (property, date, deadlines), and the
+  housekeeper marking their work Completed tells the property's manager, who is
+  the only one who can then verify it and set the overall status. Both are
+  edge-triggered — a real change of assignee, and the transition *into* completed
+  — so re-saves don't repeat themselves. Checklist items are deliberately silent:
+  one notification per ticked task would bury the completion message that
+  actually needs acting on.
 - **Pricing guard** — a `PERCENT` adjustment below `-100%` is rejected (it would
   make the nightly price negative).
 
@@ -162,10 +215,15 @@ Per-service Swagger UIs: <http://localhost:8081/swagger-ui.html> (property),
   Re-adding it would couple these services back to the monolith's admin-secured
   endpoint. In a complete migration IAM would itself be a service and this would
   be a discovered call (or, better, validated via an event).
+  - property-service *does* now call IAM, but only for a **display name**
+    (`GET /api/users/{id}/summary`, a deliberately narrow id+name+role shape open
+    to any authenticated caller). It is a cosmetic read, not a validation: the
+    write proceeds regardless of the outcome, so property-service still doesn't
+    depend on IAM being up.
 - **Full extraction (no duplicated code).** property and notification were removed
   from the monolith entirely. The three modules that referenced a property
   (booking, housekeeping, maintenance) now call property-service through a
-  `PropertyClient` (load-balanced `RestClient` → `http://property-service`), and
+  `PropertyClient` (wrapping `@FeignClient("property-service")`), and
   Flyway **V3** drops the moved tables plus the cross-service foreign keys
   (`fk_reservation_property`, `fk_turnover_property`, `fk_issue_property`,
   `fk_preventive_property`) — those `property_id` columns are now soft references

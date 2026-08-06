@@ -11,6 +11,7 @@ import { AVAILABILITY_STATUSES, AvailabilityStatus } from '../../core/models/enu
 import { LabelizePipe } from '../../shared/pipes/labelize.pipe';
 import { OwnerPageHeaderComponent } from '../../shared/ui/owner-page-header';
 import { OwnerDialogComponent } from '../../shared/ui/owner-dialog';
+import { SelectValueDirective } from '../../shared/ui/select-value';
 
 interface DayCell {
   date: string; // yyyy-MM-dd
@@ -24,11 +25,17 @@ const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 
  * A month-at-a-glance availability calendar for one property. Days are colour
  * coded by status and show the nightly base price; clicking a day opens a small
  * editor that creates or updates that date's availability entry.
+ *
+ * Days before today are read-only for everyone — an owner or manager can set
+ * status/price from today forward, and a guest can only pick today or later. Past
+ * days are greyed out and their cells are disabled, so the rule is visible rather
+ * than only enforced on submit. The backend rejects past dates as well, since a
+ * disabled button is a courtesy, not a guarantee.
  */
 @Component({
   selector: 'app-owner-availability-calendar',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ReactiveFormsModule, LabelizePipe, CurrencyPipe, OwnerPageHeaderComponent, OwnerDialogComponent],
+  imports: [ReactiveFormsModule, LabelizePipe, CurrencyPipe, OwnerPageHeaderComponent, OwnerDialogComponent, SelectValueDirective],
   templateUrl: './availability-calendar.html',
 })
 export class AvailabilityCalendarComponent implements OnInit {
@@ -82,6 +89,21 @@ export class AvailabilityCalendarComponent implements OnInit {
   private suppressClick = false;
 
   protected readonly monthLabel = computed(() => `${MONTHS[this.month()]} ${this.year()}`);
+
+  /**
+   * Today as yyyy-MM-dd, read fresh each time rather than cached at construction
+   * so a tab left open overnight doesn't keep treating yesterday as editable.
+   * Dates are compared as ISO strings, which sort chronologically.
+   */
+  protected todayDate(): string {
+    const now = new Date();
+    return `${now.getFullYear()}-${this.pad(now.getMonth() + 1)}-${this.pad(now.getDate())}`;
+  }
+
+  /** True for a day that has already passed (today itself is still editable). */
+  protected isPast(date: string): boolean {
+    return date < this.todayDate();
+  }
 
   private readonly byDate = computed(() => {
     const map = new Map<string, AvailabilityCalendarResponse>();
@@ -148,8 +170,10 @@ export class AvailabilityCalendarComponent implements OnInit {
     });
   }
 
-  protected onSelectProperty(event: Event): void {
-    const id = Number((event.target as HTMLSelectElement).value) || null;
+  // Bound through SelectValueDirective so the picked property/status survives the
+  // options list rendering (or re-rendering) after the value was set.
+  protected onSelectProperty(value: string): void {
+    const id = Number(value) || null;
     this.selectedId.set(id);
     this.entries.set([]);
     if (id) {
@@ -196,7 +220,7 @@ export class AvailabilityCalendarComponent implements OnInit {
 
   // ---- drag-to-select multiple days ----
   protected onCellMouseDown(cell: DayCell): void {
-    if (this.readOnly() || !this.selectedId()) {
+    if (this.readOnly() || !this.selectedId() || this.isPast(cell.date)) {
       return;
     }
     this.dragging = true;
@@ -233,11 +257,19 @@ export class AvailabilityCalendarComponent implements OnInit {
     return this.selectedDates().has(date);
   }
 
-  /** Every date from anchor to target inclusive (order-independent). */
+  /**
+   * Every date from anchor to target inclusive (order-independent), clamped to
+   * start no earlier than today — dragging back over past days selects from today
+   * onwards instead of picking up days nobody may edit.
+   */
   private rangeBetween(a: string, b: string): Set<string> {
-    const start = a <= b ? a : b;
+    const today = this.todayDate();
+    const start = (a <= b ? a : b) < today ? today : a <= b ? a : b;
     const end = a <= b ? b : a;
     const out = new Set<string>();
+    if (end < start) {
+      return out;
+    }
     const d = new Date(start + 'T00:00:00');
     const last = new Date(end + 'T00:00:00');
     while (d <= last) {
@@ -260,8 +292,8 @@ export class AvailabilityCalendarComponent implements OnInit {
     this.selectedDates.set(new Set());
   }
 
-  protected onBulkStatus(event: Event): void {
-    this.bulkStatus.set((event.target as HTMLSelectElement).value);
+  protected onBulkStatus(value: string): void {
+    this.bulkStatus.set(value);
   }
 
   protected onBulkPrice(event: Event): void {
@@ -273,7 +305,9 @@ export class AvailabilityCalendarComponent implements OnInit {
     this.bulkTried.set(true);
     const propertyId = this.selectedId();
     const price = Number(this.bulkPrice());
-    const dates = [...this.selectedDates()];
+    // Belt-and-braces: the grid already refuses to select past days, so this only
+    // matters if the selection was made just before midnight.
+    const dates = [...this.selectedDates()].filter((d) => !this.isPast(d));
     if (!propertyId || !(price > 0) || dates.length === 0) {
       return;
     }
@@ -315,12 +349,18 @@ export class AvailabilityCalendarComponent implements OnInit {
     // secondary way to choose dates, alongside typing them in). Doesn't open
     // the editor and only fires when the caller opts in via [selectable].
     if (this.selectable()) {
-      if (cell.entry?.availabilityStatus === 'AVAILABLE') {
+      // A guest can only pick today or a future night, however the calendar was
+      // reached — a stay can't start in the past.
+      if (cell.entry?.availabilityStatus === 'AVAILABLE' && !this.isPast(cell.date)) {
         this.dateSelected.emit(cell.date);
       }
       return;
     }
     if (this.readOnly() || !this.selectedId()) {
+      return;
+    }
+    if (this.isPast(cell.date)) {
+      this.toast.info('Past days can’t be changed — start from today.');
       return;
     }
     this.editingDate.set(cell.date);
@@ -334,8 +374,8 @@ export class AvailabilityCalendarComponent implements OnInit {
     this.editorOpen.set(false);
   }
 
-  protected onStatusChange(event: Event): void {
-    this.selectedStatus.set((event.target as HTMLSelectElement).value);
+  protected onStatusChange(value: string): void {
+    this.selectedStatus.set(value);
   }
 
   // Only basePrice lives in the reactive form; status is a signal.
@@ -349,6 +389,11 @@ export class AvailabilityCalendarComponent implements OnInit {
     const propertyId = this.selectedId();
     if (this.form.invalid || !propertyId) {
       this.form.markAllAsTouched();
+      return;
+    }
+    if (this.isPast(this.editingDate())) {
+      this.toast.error('Past days can’t be changed — start from today.');
+      this.editorOpen.set(false);
       return;
     }
     const raw = this.form.getRawValue() as { basePrice: number };
@@ -384,10 +429,11 @@ export class AvailabilityCalendarComponent implements OnInit {
     if (!cell) {
       return 'se-cal-empty';
     }
+    const past = this.isPast(cell.date) ? ' se-cal-past' : '';
     if (!cell.entry) {
-      return 'se-cal-unset';
+      return 'se-cal-unset' + past;
     }
-    return 'se-cal-' + cell.entry.availabilityStatus.toLowerCase();
+    return 'se-cal-' + cell.entry.availabilityStatus.toLowerCase() + past;
   }
 
   protected invalid(control: string): boolean {

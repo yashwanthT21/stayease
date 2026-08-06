@@ -26,19 +26,23 @@
                 <label class="form-label small mb-1">{{ f.label }}</label>
                 @switch (f.type) {
                   @case ('select') {
-                    <select class="form-select form-select-sm" (change)="writeSelect('filter', f.key, $event)">
-                      <option value="" [selected]="!filterForm.get(f.key)?.value">All</option>
+                    <select class="form-select form-select-sm"
+                            [seSelectValue]="selectValue('filter', f.key)"
+                            (seSelectValueChange)="writeSelect('filter', f.key, $event)">
+                      <option value="">All</option>
                       @for (o of f.options; track o) {
-                        <option [value]="o" [selected]="filterForm.get(f.key)?.value === o">{{ o | labelize }}</option>
+                        <option [value]="o">{{ o | labelize }}</option>
                       }
                     </select>
                   }
                   @case ('reference') {
                     @if (optionsForResource(f.ref?.resourceKey).length) {
-                      <select class="form-select form-select-sm" (change)="writeSelect('filter', f.key, $event)">
-                        <option value="" [selected]="!filterForm.get(f.key)?.value">All</option>
+                      <select class="form-select form-select-sm"
+                              [seSelectValue]="selectValue('filter', f.key)"
+                              (seSelectValueChange)="writeSelect('filter', f.key, $event)">
+                        <option value="">All</option>
                         @for (o of optionsForResource(f.ref?.resourceKey); track o.value) {
-                          <option [value]="o.value" [selected]="filterForm.get(f.key)?.value == o.value">{{ o.label }}</option>
+                          <option [value]="o.value">{{ o.label }}</option>
                         }
                       </select>
                     } @else {
@@ -86,7 +90,23 @@
         <thead class="table-light">
           <tr>
             @for (col of config.listColumns; track col) {
-              <th class="text-nowrap">{{ columnLabel(col) }}</th>
+              <th class="text-nowrap">
+                {{ columnLabel(col) }}
+                <!-- Columns can carry their own value picker in the header. A
+                     column with a per-row editor deliberately has none: the
+                     header is just a label there (see rowEditors). -->
+                @if (columnFilterFor(col); as cf) {
+                  <select class="form-select form-select-sm mt-1 fw-normal"
+                          [seSelectValue]="columnFilterValue(col)"
+                          (seSelectValueChange)="onColumnFilter(col, $event)"
+                          [title]="'Filter by ' + columnLabel(col)">
+                    <option value="">All</option>
+                    @for (o of cf.options; track o) {
+                      <option [value]="o">{{ o }}</option>
+                    }
+                  </select>
+                }
+              </th>
             }
             @if (!isReadOnly() || config.patchActions?.length) {
               <th class="text-end">Actions</th>
@@ -111,19 +131,48 @@
               <tr>
                 @for (col of config.listColumns; track col) {
                   <td class="text-nowrap">
-                    @switch (fieldFor(col)?.type) {
-                      @case ('boolean') {
-                        @if (row[col]) {
-                          <i class="bi bi-check-circle-fill text-success"></i>
-                        } @else {
-                          <i class="bi bi-dash-circle text-muted"></i>
+                    <!-- An editable column wins over the read-only renderings
+                         below: the whole point is to change it in place. -->
+                    @if (rowEditorFor(col); as ed) {
+                      <select class="form-select form-select-sm se-row-editor"
+                              [disabled]="isRowSaving(row)"
+                              [seSelectValue]="rowEditorValue(ed, row)"
+                              (seSelectValueChange)="onRowEdit(ed, row, $event)"
+                              [title]="columnLabel(col)">
+                        @for (o of ed.options; track o) {
+                          <option [value]="o">{{ o }}</option>
                         }
-                      }
-                      @case ('select') {
-                        <span class="badge {{ badgeClass(row[col]) }}">{{ row[col] | labelize }}</span>
-                      }
-                      @default {
-                        <span [class.se-truncate]="col === 'message' || col === 'action'" class="d-inline-block">{{ display(row, col) }}</span>
+                      </select>
+                    } @else {
+                      @switch (fieldFor(col)?.type) {
+                        @case ('boolean') {
+                          @if (row[col]) {
+                            <i class="bi bi-check-circle-fill text-success"></i>
+                          } @else {
+                            <i class="bi bi-dash-circle text-muted"></i>
+                          }
+                        }
+                        @case ('select') {
+                          <!-- badge colour keys off the raw enum; the text may be a
+                               friendlier valueLabels alias (see display()). -->
+                          <span class="badge {{ badgeClass(row[col]) }}">{{ display(row, col) }}</span>
+                        }
+                        @default {
+                          <!-- Long free text is ellipsised to keep the row height
+                               sane, so it MUST come with a way to read the rest —
+                               otherwise a notification just trails off in "…" and
+                               the message is unreachable. -->
+                          @if (isLongText(row, col)) {
+                            <span class="se-truncate d-inline-block align-middle" [title]="display(row, col)">{{ display(row, col) }}</span>
+                            <button type="button" class="btn btn-sm btn-link p-0 ms-1 align-middle text-decoration-none"
+                                    [title]="'Read the full ' + columnLabel(col).toLowerCase()"
+                                    (click)="openText(row, col)">
+                              <i class="bi bi-arrows-angle-expand"></i><span class="visually-hidden">Read more</span>
+                            </button>
+                          } @else {
+                            <span class="d-inline-block">{{ display(row, col) }}</span>
+                          }
+                        }
                       }
                     }
                   </td>
@@ -202,19 +251,23 @@
                       </div>
                     }
                     @case ('select') {
-                      <select class="form-select" (change)="writeSelect('form', f.key, $event)">
-                        <option value="" [selected]="!form.get(f.key)?.value">— none —</option>
+                      <select class="form-select"
+                              [seSelectValue]="selectValue('form', f.key)"
+                              (seSelectValueChange)="writeSelect('form', f.key, $event)">
+                        <option value="">— none —</option>
                         @for (o of f.options; track o) {
-                          <option [value]="o" [selected]="form.get(f.key)?.value === o">{{ o | labelize }}</option>
+                          <option [value]="o">{{ o | labelize }}</option>
                         }
                       </select>
                     }
                     @case ('reference') {
                       @if (optionsForResource(f.ref?.resourceKey).length) {
-                        <select class="form-select" (change)="writeSelect('form', f.key, $event)">
-                          <option value="" [selected]="!form.get(f.key)?.value">— select —</option>
+                        <select class="form-select"
+                                [seSelectValue]="selectValue('form', f.key)"
+                                (seSelectValueChange)="writeSelect('form', f.key, $event)">
+                          <option value="">— select —</option>
                           @for (o of optionsForResource(f.ref?.resourceKey); track o.value) {
-                            <option [value]="o.value" [selected]="form.get(f.key)?.value == o.value">{{ o.label }}</option>
+                            <option [value]="o.value">{{ o.label }}</option>
                           }
                         </select>
                       } @else {
@@ -270,6 +323,28 @@
             </button>
           </div>
         </form>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- Full-text reader: the escape hatch for an ellipsised cell. Plain text in a
+     scrollable body, selectable so the reader can copy it out. -->
+@if (textView(); as tv) {
+  <div class="se-modal-backdrop" (click)="closeText()"></div>
+  <div class="modal d-block se-modal">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+      <div class="modal-content border-0 shadow-lg">
+        <div class="modal-header">
+          <h5 class="modal-title">{{ tv.title }}</h5>
+          <button type="button" class="btn-close" (click)="closeText()"></button>
+        </div>
+        <div class="modal-body">
+          <p class="mb-0 se-wrap-text">{{ tv.body }}</p>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-outline-secondary" (click)="closeText()">Close</button>
+        </div>
       </div>
     </div>
   </div>

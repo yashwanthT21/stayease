@@ -16,6 +16,10 @@ public record OwnerStatementResponse(
         BigDecimal maintenanceCost,
         BigDecimal netPayout,
         LocalDateTime generatedDate,
-        StatementStatus status
+        StatementStatus status,
+        /** The owner's approve/reject comment — usually why they rejected it. */
+        String ownerNote,
+        /** When the owner answered; null while the statement is still awaiting them. */
+        LocalDateTime decidedDate
 ) {
 }

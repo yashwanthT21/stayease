@@ -12,13 +12,19 @@ import {
   NOTIFICATION_CATEGORIES, NOTIFICATION_STATUSES,
   PAYOUT_STATUSES,
   PROPERTY_STATUSES, PROPERTY_TYPES, RESERVATION_STATUSES,
-  STATEMENT_STATUSES, TURNOVER_STATUSES, USER_ROLES, USER_STATUSES, VERIFICATION_STATUSES,
+  STATEMENT_STATUS_OPTIONS, TURNOVER_STATUSES, USER_ROLES, USER_STATUSES, UserRole, VERIFICATION_STATUSES,
 } from './models/enums';
+import {
+  VERIFICATION_DISPLAY_OPTIONS,
+  VERIFICATION_LABELS,
+  verificationLabel,
+  verificationStatusFor,
+} from './models/verification';
 
 const propertyRef = { resourceKey: 'properties', labelFields: ['title', 'city'] };
 const guestRef = { resourceKey: 'guests', labelFields: ['name'] };
 const reservationRef = { resourceKey: 'reservations', labelFields: ['checkInDate', 'checkOutDate'] };
-const turnoverRef = { resourceKey: 'turnovers', labelFields: ['status'] };
+const turnoverRef = { resourceKey: 'turnovers', labelFields: ['assignedDate', 'status'] };
 const statementRef = { resourceKey: 'owner-statements', labelFields: ['period'] };
 
 /**
@@ -89,15 +95,40 @@ export const RESOURCES: ResourceConfig[] = [
     // guests who have booked one of their properties.
     readOnlyRoles: ['PROPERTY_MANAGER'],
     managerScope: 'reservationGuest',
-    listColumns: ['id', 'name', 'email', 'phone', 'nationality', 'verificationStatus', 'reviewScore', 'bookingCount', 'status'],
+    // Status and review score were dropped from the table: neither is actionable
+    // here, and "status" read as a second, competing verification column.
+    listColumns: ['id', 'name', 'email', 'phone', 'nationality', 'verificationStatus', 'bookingCount'],
     filters: [{ key: 'userId', label: 'User ID', type: 'number' }],
+    // Verification is SET here, not filtered by. The header is a plain label and
+    // each row carries its own Verified/Unverified dropdown that saves on pick —
+    // a manager confirming a guest's ID shouldn't have to open an edit modal.
+    // Allowed for a PROPERTY_MANAGER even though Guests is otherwise read-only
+    // for them: verifying the guests who booked their properties is their job.
+    rowEditors: [
+      {
+        key: 'verificationStatus',
+        options: VERIFICATION_DISPLAY_OPTIONS,
+        fromRow: (row) => verificationLabel(row['verificationStatus'] as string | undefined),
+        toValue: (option) => verificationStatusFor(option),
+        roles: ['PROPERTY_MANAGER', 'ADMIN'],
+      },
+    ],
     fields: [
       { key: 'userId', label: 'User (user id)', type: 'number', required: true, min: 1 },
       { key: 'name', label: 'Name', type: 'text', required: true, maxLength: 150 },
       { key: 'email', label: 'Email', type: 'email', required: true, maxLength: 180 },
       { key: 'phone', label: 'Phone', type: 'text', maxLength: 20 },
       { key: 'nationality', label: 'Nationality', type: 'text', maxLength: 80 },
-      { key: 'verificationStatus', label: 'Verification', type: 'select', options: VERIFICATION_STATUSES, help: 'Defaults to UNVERIFIED.' },
+      {
+        key: 'verificationStatus',
+        label: 'Verification',
+        type: 'select',
+        options: VERIFICATION_STATUSES,
+        // ID_VERIFIED and TRUSTED both read as "Verified" in the table, matching
+        // the header dropdown's two options.
+        valueLabels: VERIFICATION_LABELS,
+        help: 'Defaults to UNVERIFIED.',
+      },
       { key: 'status', label: 'Status', type: 'select', options: GUEST_STATUSES, help: 'Defaults to ACTIVE.' },
       { key: 'reviewScore', label: 'Review score', type: 'number', hideInForm: true },
       { key: 'bookingCount', label: 'Bookings', type: 'number', hideInForm: true },
@@ -173,6 +204,10 @@ export const RESOURCES: ResourceConfig[] = [
     ],
   },
   {
+    // Route is special-cased to TurnoverChecklistManagerComponent (see
+    // app.routes.ts) — /api/checklists is only addressable per turnover, and a
+    // turnover needs a composed label to be recognisable, so the generic engine
+    // can't render it usefully. This entry drives the nav item and route guard.
     key: 'checklists',
     apiBase: '/api/checklists',
     title: 'Turnover Checklists',
@@ -218,7 +253,9 @@ export const RESOURCES: ResourceConfig[] = [
       { key: 'managementFee', label: 'Management fee', type: 'money', min: 0 },
       { key: 'cleaningRevenue', label: 'Cleaning fee', type: 'money', min: 0 },
       { key: 'maintenanceCost', label: 'Maintenance cost', type: 'money', min: 0 },
-      { key: 'status', label: 'Status', type: 'select', options: STATEMENT_STATUSES, help: 'Defaults to DRAFT.' },
+      // APPROVED / REJECTED are the owner's answer, set only via their
+      // approve/reject actions — see STATEMENT_STATUS_OPTIONS.
+      { key: 'status', label: 'Status', type: 'select', options: STATEMENT_STATUS_OPTIONS, help: 'Defaults to DRAFT. The owner approves or rejects an issued statement.' },
       { key: 'netPayout', label: 'Net payout', type: 'money', hideInForm: true },
       { key: 'generatedDate', label: 'Generated', type: 'datetime', hideInForm: true },
     ],
@@ -237,7 +274,10 @@ export const RESOURCES: ResourceConfig[] = [
       { key: 'statementId', label: 'Statement ID', type: 'number' },
     ],
     fields: [
-      { key: 'statementId', label: 'Statement', type: 'reference', ref: statementRef, required: true },
+      // The backend refuses to create a payout unless the owner has APPROVED this
+      // statement, so a rejected or still-pending one fails with an explanatory
+      // 400 rather than silently paying out.
+      { key: 'statementId', label: 'Statement', type: 'reference', ref: statementRef, required: true, help: 'Only a statement the owner has approved can be paid out.' },
       { key: 'ownerId', label: 'Owner (user id)', type: 'number', required: true, min: 1 },
       { key: 'amount', label: 'Amount', type: 'money', required: true, min: 0.01 },
       { key: 'paymentDate', label: 'Payment date', type: 'date' },
@@ -254,10 +294,18 @@ export const RESOURCES: ResourceConfig[] = [
     singular: 'Notification',
     icon: 'bi-bell',
     group: 'Notifications',
-    // Guests see only their own notifications and can't author them (but can
-    // still mark read / dismiss via the patch actions below).
-    roleScope: { GUEST: { param: 'userId', value: 'userId' } },
-    readOnlyRoles: ['GUEST'],
+    // A notification is addressed to one person, so every role except ADMIN sees
+    // only their own inbox and can't author notifications — they can still mark
+    // read / dismiss via the patch actions below. Without this scoping a manager
+    // or owner would see every user's notifications, including each other's.
+    roleScope: {
+      GUEST: { param: 'userId', value: 'userId' },
+      OWNER: { param: 'userId', value: 'userId' },
+      PROPERTY_MANAGER: { param: 'userId', value: 'userId' },
+      HOUSEKEEPING: { param: 'userId', value: 'userId' },
+      FINANCE: { param: 'userId', value: 'userId' },
+    },
+    readOnlyRoles: ['GUEST', 'OWNER', 'PROPERTY_MANAGER', 'HOUSEKEEPING', 'FINANCE'],
     listColumns: ['id', 'userId', 'message', 'category', 'status', 'createdDate'],
     filters: [
       { key: 'userId', label: 'User ID', type: 'number' },
@@ -321,6 +369,34 @@ const BY_KEY = new Map<string, ResourceConfig>(RESOURCES.map((r) => [r.key, r]))
 
 export function getResource(key: string): ResourceConfig | undefined {
   return BY_KEY.get(key);
+}
+
+/**
+ * Roles whose workspace is a fixed short list of resources.
+ *
+ * Most resources declare no `roles`, which means "any authenticated user" — fine
+ * for operational roles, but it left a housekeeper and a financier looking at a
+ * sidebar full of screens that have nothing to do with their job (and that the
+ * API would mostly refuse anyway). Listing the keys they DO need is far less
+ * fragile than adding an ever-growing `roles` array to every other resource.
+ *
+ * This is enforced in two places: the sidebar (layout/shell.ts) hides everything
+ * else, and roleGuard (core/guards/role.guard.ts) blocks it by URL too, so a
+ * bookmark or a typed address can't get around the sidebar.
+ */
+export const ROLE_RESOURCE_ALLOWLIST: Partial<Record<UserRole, readonly string[]>> = {
+  HOUSEKEEPING: ['notifications', 'turnovers', 'checklists'],
+  FINANCE: ['owner-statements', 'owner-payouts'],
+};
+
+/** True when `role` is allowed to reach the resource with this key. */
+export function canRoleUseResource(role: UserRole | null, key: string): boolean {
+  const resource = BY_KEY.get(key);
+  if (resource?.roles?.length && (!role || !resource.roles.includes(role))) {
+    return false;
+  }
+  const allowed = role ? ROLE_RESOURCE_ALLOWLIST[role] : undefined;
+  return !allowed || allowed.includes(key);
 }
 
 /** Nav group display order. */

@@ -14,6 +14,15 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
+/**
+ * Owner payouts.
+ *
+ * A payout is the money actually leaving, so it is gated on the owner having
+ * APPROVED the statement it pays against (see
+ * {@link OwnerStatementService#isApproved}). That check lives here, on the write
+ * path, rather than only being hidden in the UI — otherwise Finance could release
+ * a payout on figures an owner had rejected simply by calling the API directly.
+ */
 @Service
 @Transactional
 public class OwnerPayoutServiceImpl implements OwnerPayoutService {
@@ -36,6 +45,7 @@ public class OwnerPayoutServiceImpl implements OwnerPayoutService {
     @Override
     public OwnerPayoutResponse create(OwnerPayoutRequest request) {
         validateReferences(request);
+        ensureStatementApproved(request.statementId());
         OwnerPayout saved = repository.save(OwnerPayoutMapper.toEntity(request));
         // Financial posting — record it in the audit trail.
         auditService.record(saved.getOwnerId(), "ISSUE_PAYOUT id=" + saved.getId(), "OwnerPayout");
@@ -88,6 +98,21 @@ public class OwnerPayoutServiceImpl implements OwnerPayoutService {
         }
         if (!userService.existsById(request.ownerId())) {
             throw new ResourceNotFoundException("Owner (user) not found with id " + request.ownerId());
+        }
+    }
+
+    /**
+     * Refuse to pay out against a statement the owner hasn't signed off.
+     *
+     * Only enforced when CREATING a payout: once one exists, editing it (fixing a
+     * bank reference, marking it PAID) must not be blocked by a later change to the
+     * statement's state.
+     */
+    private void ensureStatementApproved(Long statementId) {
+        if (!ownerStatementService.isApproved(statementId)) {
+            throw new IllegalArgumentException(
+                    "Statement #" + statementId + " has not been approved by the owner yet — "
+                            + "a payout can only be released once they approve it");
         }
     }
 }

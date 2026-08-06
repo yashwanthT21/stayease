@@ -99,6 +99,28 @@ export class OwnerDataService {
     return this.crud.list<OwnerPayoutResponse>('/api/owner-payouts', { ownerId });
   }
 
+  /**
+   * Accept a statement's figures. This is what releases the payout: Finance cannot
+   * create one until the owner has approved (enforced server-side).
+   */
+  approveStatement(id: number, note?: string): Observable<OwnerStatementResponse> {
+    return this.crud.patchBody<OwnerStatementResponse>(
+      `/api/owner-statements/${id}/approve`,
+      { note: note ?? null },
+    );
+  }
+
+  /**
+   * Dispute a statement. The reason is required — it's what Finance is notified
+   * with and works from when correcting and re-issuing.
+   */
+  rejectStatement(id: number, note: string): Observable<OwnerStatementResponse> {
+    return this.crud.patchBody<OwnerStatementResponse>(
+      `/api/owner-statements/${id}/reject`,
+      { note },
+    );
+  }
+
   /** Reservations for every one of the owner's properties, grouped by property. */
   myReservations(): Observable<PropertyReservations[]> {
     return this.myProperties().pipe(

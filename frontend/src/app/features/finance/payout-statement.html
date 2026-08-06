@@ -20,7 +20,20 @@
     <div class="col-6 col-lg-4"><app-stat-tile label="Pending" [value]="totalPending() | currency" icon="bi-hourglass-split" tone="warning" /></div>
   </div>
 
-  <!-- Statements -->
+  <!-- Statements. An ISSUED one is waiting on this owner: approving releases the
+       payout, rejecting sends it back to Finance with a reason. -->
+  @if (awaitingCount() > 0) {
+    <div class="alert alert-warning d-flex align-items-start gap-2">
+      <i class="bi bi-hourglass-split fs-5"></i>
+      <div>
+        <div class="fw-semibold">
+          {{ awaitingCount() }} statement{{ awaitingCount() === 1 ? '' : 's' }} waiting for your approval
+        </div>
+        <div class="small">Your payout is released only after you approve. If the figures look wrong, reject with a reason and Finance will re-issue it.</div>
+      </div>
+    </div>
+  }
+
   <div class="card shadow-sm border-0 mb-4 overflow-hidden">
     <div class="card-header bg-white fw-semibold"><i class="bi bi-file-earmark-text me-1"></i>Statements</div>
     <div class="table-responsive">
@@ -35,11 +48,12 @@
             <th class="text-end">Maintenance</th>
             <th class="text-end">Net payout</th>
             <th>Status</th>
+            <th class="text-end">Your decision</th>
           </tr>
         </thead>
         <tbody>
           @if (statements().length === 0) {
-            <tr><td colspan="8" class="text-center text-muted py-4">No statements available yet.</td></tr>
+            <tr><td colspan="9" class="text-center text-muted py-4">No statements available yet.</td></tr>
           } @else {
             @for (s of statements(); track s.id) {
               <tr>
@@ -50,7 +64,32 @@
                 <td class="text-end text-muted">{{ s.cleaningRevenue | currency }}</td>
                 <td class="text-end text-muted">{{ s.maintenanceCost | currency }}</td>
                 <td class="text-end fw-semibold text-success">{{ s.netPayout | currency }}</td>
-                <td><span class="badge {{ statementBadge(s.status) }}">{{ s.status | labelize }}</span></td>
+                <td>
+                  <span class="badge {{ statementBadge(s.status) }}">{{ s.status | labelize }}</span>
+                  @if (s.status === 'REJECTED' && s.ownerNote) {
+                    <div class="small text-danger mt-1 se-wrap-text" style="max-width: 280px">
+                      <i class="bi bi-chat-left-quote me-1"></i>{{ s.ownerNote }}
+                    </div>
+                  }
+                </td>
+                <td class="text-end text-nowrap">
+                  @if (awaitsDecision(s)) {
+                    <button class="btn btn-sm btn-success me-1" (click)="openDecision(s, 'approve')">
+                      <i class="bi bi-check2-circle me-1"></i>Approve
+                    </button>
+                    <button class="btn btn-sm btn-outline-danger" (click)="openDecision(s, 'reject')">
+                      <i class="bi bi-x-circle me-1"></i>Reject
+                    </button>
+                  } @else if (s.status === 'APPROVED') {
+                    <span class="text-success small"><i class="bi bi-check2-all me-1"></i>Approved</span>
+                  } @else if (s.status === 'REJECTED') {
+                    <span class="text-danger small"><i class="bi bi-arrow-counterclockwise me-1"></i>Sent back to Finance</span>
+                  } @else if (s.status === 'PAID') {
+                    <span class="text-muted small">Paid</span>
+                  } @else {
+                    <span class="text-muted small">Not yet issued</span>
+                  }
+                </td>
               </tr>
             }
           }
@@ -93,4 +132,59 @@
       </table>
     </div>
   </div>
+}
+
+<!-- Approve / reject dialog. One dialog for both so the figures being signed off
+     are restated either way — an owner shouldn't have to remember what they were
+     looking at when they clicked. -->
+@if (decisionTarget(); as s) {
+  <app-owner-dialog
+    [title]="decisionKind() === 'approve' ? 'Approve statement ' + s.period : 'Reject statement ' + s.period"
+    [icon]="decisionKind() === 'approve' ? 'bi-check2-circle' : 'bi-x-circle'"
+    size="md"
+    (dismiss)="closeDecision()">
+    <div class="modal-body">
+      <div class="card border-0 bg-light mb-3">
+        <div class="card-body py-2">
+          <div class="d-flex justify-content-between py-1">
+            <span class="text-muted">Period</span><span class="fw-semibold">{{ s.period }}</span>
+          </div>
+          <div class="d-flex justify-content-between py-1">
+            <span class="text-muted">Net payout</span>
+            <span class="fw-bold text-success">{{ s.netPayout | currency }}</span>
+          </div>
+        </div>
+      </div>
+
+      @if (decisionKind() === 'approve') {
+        <p class="small text-muted">
+          Approving confirms these figures are correct. Finance can then release the payout —
+          you won't be able to change your answer afterwards.
+        </p>
+        <label class="form-label">Comment <span class="text-muted small">(optional)</span></label>
+        <textarea class="form-control" rows="3" maxlength="500" [value]="decisionNote()"
+                  (input)="onDecisionNote($event)" placeholder="Anything you'd like to note…"></textarea>
+      } @else {
+        <p class="small text-muted">
+          Tell Finance what's wrong. They'll correct the figures and re-issue the statement for
+          you to review again; no payout is released in the meantime.
+        </p>
+        <label class="form-label">Reason <span class="text-danger">*</span></label>
+        <textarea class="form-control" rows="3" maxlength="500" [value]="decisionNote()"
+                  (input)="onDecisionNote($event)" [class.is-invalid]="triedDecide() && reasonMissing()"
+                  placeholder="e.g. Maintenance cost of ₹8,000 isn't mine — that repair was at another property."></textarea>
+        @if (triedDecide() && reasonMissing()) {
+          <div class="invalid-feedback d-block">Please say what's wrong so Finance can correct it.</div>
+        }
+      }
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-outline-secondary" (click)="closeDecision()">Cancel</button>
+      <button type="button" class="btn {{ decisionKind() === 'approve' ? 'btn-success' : 'btn-danger' }}"
+              [disabled]="deciding()" (click)="submitDecision()">
+        @if (deciding()) { <span class="spinner-border spinner-border-sm me-1"></span> }
+        {{ decisionKind() === 'approve' ? 'Approve statement' : 'Reject statement' }}
+      </button>
+    </div>
+  </app-owner-dialog>
 }

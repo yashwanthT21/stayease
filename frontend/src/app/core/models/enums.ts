@@ -34,6 +34,21 @@ export type CheckInStatus = (typeof CHECK_IN_STATUSES)[number];
 export const CHECK_OUT_STATUSES = ['CHECKED_OUT', 'DAMAGE_REPORTED'] as const;
 export type CheckOutStatus = (typeof CHECK_OUT_STATUSES)[number];
 
+/**
+ * What a check-out form actually OFFERS — only CHECKED_OUT.
+ *
+ * DAMAGE_REPORTED was a second way to say the same thing: the screen already has
+ * a dedicated "Damage noted" flag plus a description, so recording damage in the
+ * status as well let one record disagree with itself (status DAMAGE_REPORTED,
+ * damageNoted false). Recording a departure now has exactly one outcome, and
+ * damage is captured by the flag.
+ *
+ * The value stays in CHECK_OUT_STATUSES (and in the backend enum) on purpose, so
+ * rows already saved with it still read and badge correctly — it just can't be
+ * chosen again.
+ */
+export const CHECK_OUT_STATUS_OPTIONS = ['CHECKED_OUT'] as const;
+
 export const REVIEW_STATUSES = ['PUBLISHED', 'MODERATED', 'REMOVED'] as const;
 export type ReviewStatus = (typeof REVIEW_STATUSES)[number];
 
@@ -74,8 +89,19 @@ export type ReportedByType = (typeof REPORTED_BY_TYPES)[number];
 export const PAYOUT_STATUSES = ['PENDING', 'PAID', 'FAILED'] as const;
 export type PayoutStatus = (typeof PAYOUT_STATUSES)[number];
 
-export const STATEMENT_STATUSES = ['DRAFT', 'ISSUED', 'PAID'] as const;
+export const STATEMENT_STATUSES = ['DRAFT', 'ISSUED', 'APPROVED', 'REJECTED', 'PAID'] as const;
 export type StatementStatus = (typeof STATEMENT_STATUSES)[number];
+
+/**
+ * The statuses FINANCE may set on a statement. APPROVED and REJECTED are the
+ * owner's answer, set only through their approve/reject actions — offering them in
+ * Finance's dropdown would let Finance approve on the owner's behalf and walk
+ * straight through the payout gate.
+ */
+export const STATEMENT_STATUS_OPTIONS = ['DRAFT', 'ISSUED', 'PAID'] as const;
+
+/** A payout may only be created against a statement in this state. */
+export const STATEMENT_APPROVED: StatementStatus = 'APPROVED';
 
 // ---- Property ----
 export const PROPERTY_TYPES = ['APARTMENT', 'VILLA', 'COTTAGE', 'TOWNHOUSE', 'STUDIO', 'BUNGALOW_ROOM'] as const;
@@ -87,14 +113,9 @@ export type PropertyStatus = (typeof PROPERTY_STATUSES)[number];
 export const AVAILABILITY_STATUSES = ['AVAILABLE', 'BOOKED', 'BLOCKED', 'OWNER_USE'] as const;
 export type AvailabilityStatus = (typeof AVAILABILITY_STATUSES)[number];
 
-export const PRICING_RULE_TYPES = ['SEASONAL_RATE', 'WEEKEND_SURCHARGE', 'LENGTH_OF_STAY_DISCOUNT', 'SPECIAL_EVENT_RATE'] as const;
-export type PricingRuleType = (typeof PRICING_RULE_TYPES)[number];
-
-export const ADJUSTMENT_TYPES = ['PERCENT', 'FIXED'] as const;
-export type AdjustmentType = (typeof ADJUSTMENT_TYPES)[number];
-
-export const PRICING_RULE_STATUSES = ['ACTIVE', 'INACTIVE'] as const;
-export type PricingRuleStatus = (typeof PRICING_RULE_STATUSES)[number];
+// Pricing-rule enums were removed with the pricing-rule API (see
+// property-service): the PricingRule entity survives only so deleting a property
+// can clean up its old rows, and nothing in the client ever reads them.
 
 // ---- Notification ----
 export const NOTIFICATION_CATEGORIES = ['BOOKING', 'CHECK_IN', 'HOUSEKEEPING', 'MAINTENANCE', 'PAYOUT', 'REVIEW', 'PROPERTY'] as const;

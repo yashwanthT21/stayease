@@ -76,6 +76,18 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * 403 — authenticated, but not allowed to touch THIS record (e.g. an owner
+     * approving someone else's statement). SecurityConfig's URL rules can't express
+     * per-record ownership, so the service decides it and we map it here; without
+     * this handler the catch-all below would report it as a 500.
+     */
+    @ExceptionHandler(ForbiddenOperationException.class)
+    public ResponseEntity<ErrorResponse> handleForbidden(
+            ForbiddenOperationException ex, HttpServletRequest request) {
+        return build(HttpStatus.FORBIDDEN, ex.getMessage(), request);
+    }
+
+    /**
      * 400 — a business rule rejected the input (e.g. endDate before startDate).
      * Unlike @Valid failures, these are decided in the service, so we throw a
      * plain IllegalArgumentException and map it here.

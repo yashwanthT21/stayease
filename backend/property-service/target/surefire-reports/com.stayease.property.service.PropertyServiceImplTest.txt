@@ -1,0 +1,4 @@
+-------------------------------------------------------------------------------
+Test set: com.stayease.property.service.PropertyServiceImplTest
+-------------------------------------------------------------------------------
+Tests run: 13, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 2.035 s -- in com.stayease.property.service.PropertyServiceImplTest
