@@ -1,12 +1,12 @@
 import { Routes } from '@angular/router';
 import { roleGuard } from '../../core/guards/role.guard';
 import { OwnerHomeComponent } from './owner-home';
-import { PropertyListingComponent } from '../property/property-listing';
-import { PropertyManagerComponent } from '../property/property-manager';
-import { AvailabilityCalendarComponent } from '../property/availability-calendar';
-import { BookingSummaryComponent } from '../booking/booking-summary';
-import { PayoutStatementComponent } from '../finance/payout-statement';
-import { ReviewAnalyticsComponent } from '../stay/review-analytics';
+import { PropertyListingComponent } from '../property/property-listing/property-listing';
+import { PropertyManagerComponent } from '../property/property-manager/property-manager';
+import { AvailabilityCalendarComponent } from '../property/availability-calendar/availability-calendar';
+import { BookingSummaryComponent } from '../booking/booking-summary/booking-summary';
+import { PayoutStatementComponent } from '../finance/payout-statement/payout-statement';
+import { ReviewAnalyticsComponent } from '../stay/review-analytics/review-analytics';
 
 /**
  * The owner-only area. The whole subtree is gated to the OWNER role so no other

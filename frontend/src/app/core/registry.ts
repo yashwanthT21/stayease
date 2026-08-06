@@ -1,11 +1,11 @@
 import { ResourceConfig } from '../shared/crud/resource-config';
 // Stay-domain screen config is owned by the stay module and composed in below.
-import { CHECK_IN_RESOURCE } from '../features/stay/check-in.resource';
-import { CHECK_OUT_RESOURCE } from '../features/stay/check-out.resource';
-import { REVIEW_RESOURCE } from '../features/stay/review.resource';
+import { CHECK_IN_RESOURCE } from '../features/stay/check-in/check-in.resource';
+import { CHECK_OUT_RESOURCE } from '../features/stay/check-out/check-out.resource';
+import { REVIEW_RESOURCE } from '../features/stay/reviews/review.resource';
 // Maintenance-domain screen config is owned by the maintenance module.
-import { MAINTENANCE_ISSUE_RESOURCE } from '../features/maintenance/maintenance-issue.resource';
-import { PREVENTIVE_MAINTENANCE_RESOURCE } from '../features/maintenance/preventive-maintenance.resource';
+import { MAINTENANCE_ISSUE_RESOURCE } from '../features/maintenance/maintenance-issue/maintenance-issue.resource';
+import { PREVENTIVE_MAINTENANCE_RESOURCE } from '../features/maintenance/preventive-maintenance/preventive-maintenance.resource';
 import {
   AVAILABILITY_STATUSES, BOOKING_SOURCES,
   CHECKLIST_CATEGORIES, CHECKLIST_STATUSES, GUEST_STATUSES,
@@ -172,9 +172,10 @@ export const RESOURCES: ResourceConfig[] = [
   },
 
   // ============================= STAY =============================
-  // Screen config for the Stay domain is owned by the stay module
-  // (features/stay/*.resource.ts) — check-in, check-out and reviews — and
-  // composed in here in their original order. Behaviour is unchanged.
+  // Screen config for the Stay domain is owned by the stay module — each screen
+  // keeps its own ResourceConfig next to its component
+  // (features/stay/<screen>/<screen>.resource.ts) — and is composed in here in
+  // their original order. Behaviour is unchanged.
   CHECK_IN_RESOURCE,
   CHECK_OUT_RESOURCE,
   REVIEW_RESOURCE,

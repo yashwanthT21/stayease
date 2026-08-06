@@ -69,8 +69,24 @@ src/app/
   core/       auth, http interceptors, guards, models/enums, CrudService, registry
   shared/     resource-config types, the generic resource page, pipes, toast host
   layout/     shell (sidebar + top bar)
-  features/   auth (login/register), dashboard
+  features/   one folder per domain — see each folder's README.md
 ```
+
+Inside a feature, each screen gets **its own folder** holding everything that
+belongs to it — component, template, registry config and any spec:
+
+```
+features/stay/
+  README.md
+  check-in/     check-in.ts · check-in.html · check-in.resource.ts
+  check-out/    check-out.ts · check-out.html · check-out.resource.ts
+  reviews/      review.resource.ts
+```
+
+Code shared by more than one screen in a feature sits in a `shared/` folder
+beside them (currently only `booking/shared/booking.service.ts`). Features with a
+single screen — `dashboard`, `guest`, `notification`, `owner` — stay flat, since a
+subfolder there would be noise rather than structure.
 
 ## Roles
 

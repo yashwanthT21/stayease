@@ -3,22 +3,22 @@ import { authGuard } from './core/guards/auth.guard';
 import { roleGuard } from './core/guards/role.guard';
 import { RESOURCES } from './core/registry';
 import { ShellComponent } from './layout/shell';
-import { LoginComponent } from './features/iam/login';
-import { RegisterComponent } from './features/iam/register';
+import { LoginComponent } from './features/iam/login/login';
+import { RegisterComponent } from './features/iam/register/register';
 import { DashboardComponent } from './features/dashboard/dashboard';
 import { ResourcePageComponent } from './shared/components/resource-page';
 import { OWNER_ROUTES } from './features/owner/owner.routes';
-import { AvailabilityCalendarComponent } from './features/property/availability-calendar';
-import { BrowsePropertiesComponent } from './features/property/browse-properties';
-import { MyReservationsComponent } from './features/booking/my-reservations';
-import { GuestProfileComponent } from './features/booking/guest-profile';
-import { TurnoverAssignmentComponent } from './features/housekeeping/turnover-assignment';
-import { TurnoverChecklistManagerComponent } from './features/housekeeping/turnover-checklist-manager';
-import { CheckInComponent } from './features/stay/check-in';
-import { CheckOutComponent } from './features/stay/check-out';
-import { StatementBuilderComponent } from './features/finance/statement-builder';
-import { MaintenanceIssueComponent } from './features/maintenance/maintenance-issue';
-import { PreventiveMaintenanceComponent } from './features/maintenance/preventive-maintenance';
+import { AvailabilityCalendarComponent } from './features/property/availability-calendar/availability-calendar';
+import { BrowsePropertiesComponent } from './features/property/browse-properties/browse-properties';
+import { MyReservationsComponent } from './features/booking/my-reservations/my-reservations';
+import { GuestProfileComponent } from './features/booking/guest-profile/guest-profile';
+import { TurnoverAssignmentComponent } from './features/housekeeping/turnover-assignment/turnover-assignment';
+import { TurnoverChecklistManagerComponent } from './features/housekeeping/turnover-checklist-manager/turnover-checklist-manager';
+import { CheckInComponent } from './features/stay/check-in/check-in';
+import { CheckOutComponent } from './features/stay/check-out/check-out';
+import { StatementBuilderComponent } from './features/finance/statement-builder/statement-builder';
+import { MaintenanceIssueComponent } from './features/maintenance/maintenance-issue/maintenance-issue';
+import { PreventiveMaintenanceComponent } from './features/maintenance/preventive-maintenance/preventive-maintenance';
 
 /**
  * Routes are generated from the resource registry: one CRUD route per resource,

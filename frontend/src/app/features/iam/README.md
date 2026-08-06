@@ -7,9 +7,18 @@
 
 Sign-in / registration and the admin user & audit screens.
 
-## Bespoke screens in this folder
-- `login.ts` / `login.html` — email + password sign-in.
-- `register.ts` / `register.html` — self-registration with role selection.
+## Layout
+One folder per screen:
+
+```
+iam/
+├── login/     login.ts · login.html
+└── register/  register.ts · register.html
+```
+
+## Bespoke screens
+- `login/` — email + password sign-in.
+- `register/` — self-registration with role selection.
 
 ## Registry-driven screens (rendered by `shared/components/resource-page.ts`)
 Declared in `core/registry.ts` under the **Administration** group:
